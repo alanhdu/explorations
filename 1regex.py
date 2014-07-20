@@ -47,6 +47,8 @@ class FSM():
         while toVisit:
             state = toVisit.pop()
             if state not in visited:
+                toVisit.extend(v for value in state.values() 
+                                 for v in value)
                 for key, value in state.items():
                     for v in value:
                         toVisit.append(v)
