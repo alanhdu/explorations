@@ -25,29 +25,50 @@ class State(dict):
                                              done=self.done)
 
 class DFSA():
+
     def __init__(self, fsm):
         fsm.remove()
         fsm.clean()
 
-        other = list(fsm.states)
-        lookup = {}
-        for i, state in enumerate(fsm.states):
-            lookup[state] = i
-            
-        size = 2 ** len(other)
+        self.nstates = list(fsm.states)
+        self.size = 2 ** len(self.nstates)
         self.states, self.done = {}, {}
-        for i in xrange(size):
-            self.states[i] = {}
+        
+        states = fsm.descend({fsm.begin})
+        self.begin = self.toIndex(states)
 
-            b = bin(i)[2:]  # bitstring equivalent
-            states = [j for j, bit in enumerate(reversed(b)) 
-                      if bit == '1']
-            states = {fsm.states[s] for s in states}
-            keys = reduce(set.union, (set(state.keys()) for state in states),
-                          set())
-            for key in keys:
-                d = reduce(set.union, (state[key] for state in states))
-                
+        stack = deque([states])
+        visited = set()
+
+        while stack:
+            states = stack.pop()
+            index = self.toIndex(states)
+            if index not in visited:
+                self.done[index] = any(state.done for state in states)
+                visited.add(index)
+                self.states[index] = {}
+                for key in self._getKeys(states):
+                    new = reduce(set.union, (s[key] for s in states), set())
+                    stack.append(new)
+                    if new:
+                        self.states[index][key] = self.toIndex(new)
+    def match(self, s):
+        try:
+            state = self.begin
+            for char in s:
+                state = self.states[state][char]
+            return True
+        except KeyError:
+            return False
+
+    def toIndex(self, states):
+        bits = [i for i, s in enumerate(self.nstates) if s in states]
+        bitstring = "".join("1" if bit in bits else "0"
+                            for bit in range(self.size))
+        return int(bitstring, 2)
+    def _getKeys(self, states):
+        return reduce(set.union, (set(s) for s in states), set())
+
 
 class FSM():
     def __init__(self):
@@ -192,3 +213,5 @@ def parse(s, regexs=None):
             f.remove()
             f.clean()
             return f
+def compile(pattern):
+    return DFSA(parse(pattern))
