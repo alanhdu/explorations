@@ -1,14 +1,67 @@
-import numpy as np
+import warnings
+
 import pyparsing as pp
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.core.function import UndefinedFunction
-from toolz import keyfilter
+import toolz
 import sympy
 
-custom_funcs = {"rank": np.log}
+custom_funcs = {}
 
-def pick(whitelist, d):
-    return keyfilter(lambda k: k in whitelist, d)
+@toolz.curry
+def register(name, func):
+    if name in custom_funcs:
+        warnings.warn(name + " already taken", RuntimeWarning)
+    else:
+        custom_funcs[name] = func
+    return func
+
+def pick(whitelist, dictionary):
+    return toolz.keyfilter(lambda k: k in whitelist, dictionary)
+
+class Selector(object):
+    def __init__(self, expr, symbols=None, custom_funcs=()):
+        if symbols is None: # assume var names are column names too
+            self.symbols = {s:s for s in map(str, expr.atoms(sympy.Symbol))}
+        else:
+            self.symbols = symbols
+        self.custom_funcs = custom_funcs
+        self.funcs = {}
+
+        def register_custom_functions(expr):
+            if isinstance(expr.func, UndefinedFunction):
+                name = "f{}".format(len(self.funcs))
+                self.funcs[name] = None # reserve name
+
+                args = (register_custom_functions(arg) for arg in expr.args)
+                self.funcs[name] = expr.func(*args)
+                return sympy.Symbol(name)
+            elif expr.args:
+                args = (register_custom_functions(arg) for arg in expr.args)
+                return expr.func(*args)
+            else:
+                return expr
+        self.expr = register_custom_functions(expr)
+
+    def __call__(self, data):
+        kwargs = {k: data[v] for k, v in self.symbols.iteritems()}
+
+        def compute(expr):
+            symbols = expr.atoms(sympy.Symbol)
+            kwarg = pick(map(str, symbols), kwargs)
+            f = sympy.lambdify(symbols, expr, "numpy")
+            return f(**kwarg)
+
+        for fs, sym_func in sorted(self.funcs.iteritems(), reverse=True):
+            funcname = str(sym_func.func)
+            if funcname in self.custom_funcs:
+                func = self.custom_funcs[funcname]
+            else:
+                func = custom_funcs[funcname]
+            args = (compute(arg) for arg in sym_func.args)
+            kwargs[fs] = func(*args)
+
+        return compute(self.expr)
 
 lpar = pp.Suppress("(")
 rpar = pp.Suppress(")")
@@ -48,43 +101,12 @@ def parse(s):
 
     return parse_expr("".join(expr.parseString(s))), symbols
 
-class Selector(object):
-    def __init__(self, s):
-        expr, symbols = parse(s)
-        self.symbols = {v:k for k, v in symbols.iteritems()}
-        self.funcs = {}
+def select(expr, data=None, c_funcs=()):
+    expr, symbols = parse(expr)
+    symbols = {v:k for k, v in symbols.iteritems()} # reverse mapping
+    s = Selector(expr, symbols, c_funcs)
 
-        def compute(expr):
-            if isinstance(expr.func, UndefinedFunction):
-
-                name = "f{}".format(len(self.funcs))
-                f = sympy.Symbol(name)
-                self.funcs[name] = ""
-                self.funcs[name] = expr.func(*(compute(arg) for arg in expr.args))
-                return f
-            elif expr.args:
-                args = [compute(arg) for arg in expr.args]
-                return expr.func(*args)
-            else:
-                return expr
-        self.expr = compute(expr)
-    def __call__(self, data):
-        kwargs = {k: data[v] for k, v in self.symbols.iteritems()}
-
-        def compute(expr):
-            symbols = expr.atoms(sympy.Symbol)
-            kwarg = pick(map(str, symbols), kwargs)
-            f = sympy.lambdify(symbols, expr, "numpy")
-            return f(**kwarg)
-
-        for fs in sorted(self.funcs, reverse=True):
-            func = self.funcs[fs]
-            funcname = str(func.func)
-            s = [compute(arg) for arg in func.args]
-            kwargs[fs] = custom_funcs[funcname](*(compute(arg) for arg in func.args))
-
-        return compute(self.expr)
-
-def compute(expr, data):
-    s = Selector(expr)
-    return s(data)
+    if data is None:
+        return s
+    else:
+        return s(data)
