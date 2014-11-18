@@ -41,7 +41,7 @@ class ParseTest(unittest.TestCase):
 
 class SelectTest(unittest.TestCase):
     def setUp(self):
-        self.data = {"x": 2, "y": 3, "z": 4}
+        self.data = {"x": 2, "y": 3, "z": 4, "x1":10}
         self.data2 = {"x": [1, 2, 3]}
     def test_arithmetic(self):
         x, y, z = sympy.symbols("x y z")
@@ -65,6 +65,12 @@ class SelectTest(unittest.TestCase):
 
         x = self.data["x"]
         assert s == np.log(double(x)) + 1
+    def test_custom_get(self):
+        def get(value, d):
+            return d[value + "1"]
+        f = ds.Selector(parse_expr('log("x")'), get=get)
+        s = f(self.data)
+        assert s == np.log(10)
 
 
 if __name__ == "__main__":

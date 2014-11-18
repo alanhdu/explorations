@@ -20,13 +20,14 @@ def pick(whitelist, dictionary):
     return toolz.keyfilter(lambda k: k in whitelist, dictionary)
 
 class Selector(object):
-    def __init__(self, expr, symbols=None, custom_funcs=()):
+    def __init__(self, expr, symbols=None, custom_funcs=(), get=toolz.get):
         if symbols is None: # assume var names are column names too
             self.symbols = {s:s for s in map(str, expr.atoms(sympy.Symbol))}
         else:
             self.symbols = symbols
         self.custom_funcs = custom_funcs
         self.funcs = {}
+        self.get = get
 
         def register_custom_functions(expr):
             if isinstance(expr.func, UndefinedFunction):
@@ -44,7 +45,7 @@ class Selector(object):
         self.expr = register_custom_functions(expr)
 
     def __call__(self, data):
-        kwargs = {k: data[v] for k, v in self.symbols.iteritems()}
+        kwargs = {k: self.get(v, data) for k, v in self.symbols.iteritems()}
 
         def compute(expr):
             symbols = expr.atoms(sympy.Symbol)
