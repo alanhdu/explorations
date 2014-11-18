@@ -34,13 +34,6 @@ class Selector(object):
     def _sympy_(self):
         return self.original_expr
 
-    @toolz.curry
-    def register(self, name, func):
-        if name in self.custom_funcs:
-            warnings.warn("Name '" + name + "' already taken", RuntimeWarning)
-        self.custom_funcs[name] = func
-        return func
-    
     def compute(self, expr, kwargs):
         symbols = expr.atoms(sympy.Symbol)
         kwarg = pick(map(str, symbols), kwargs)
@@ -119,10 +112,10 @@ def replace_custom_functions(expr, funcs):
     else:
         return expr
 
-def select(expr, data=None, get=toolz.get, c_funcs=()):
+def select(expr, data=None, get=toolz.get, custom_funcs=()):
     expr, symbols = parse(expr)
     symbols = {v:k for k, v in symbols.iteritems()} # reverse mapping
-    s = Selector(expr, symbols, custom_func=sc_funcs, get=get)
+    s = Selector(expr, symbols, custom_funcs=custom_funcs, get=get)
 
     if data is None:
         return s
