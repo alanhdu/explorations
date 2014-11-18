@@ -11,9 +11,8 @@ custom_funcs = {}
 @toolz.curry
 def register(name, func):
     if name in custom_funcs:
-        warnings.warn(name + " already taken", RuntimeWarning)
-    else:
-        custom_funcs[name] = func
+        warnings.warn("Name '" + name + "' already taken", RuntimeWarning)
+    custom_funcs[name] = func
     return func
 
 def pick(whitelist, dictionary):
@@ -21,7 +20,7 @@ def pick(whitelist, dictionary):
 
 class Selector(object):
     def __init__(self, expr, symbols=None, custom_funcs=(), get=toolz.get):
-        if symbols is None: # assume var names are column names too
+        if symbols is None: # assume var names stay unchanged
             self.symbols = {s:s for s in map(str, expr.atoms(sympy.Symbol))}
         else:
             self.symbols = symbols
@@ -29,29 +28,27 @@ class Selector(object):
         self.funcs = {}
         self.get = get
 
-        def register_custom_functions(expr):
-            if isinstance(expr.func, UndefinedFunction):
-                name = "f{}".format(len(self.funcs))
-                self.funcs[name] = None # reserve name
+        self.original_expr = expr
+        self.expr = replace_custom_functions(expr, self.funcs)
 
-                args = (register_custom_functions(arg) for arg in expr.args)
-                self.funcs[name] = expr.func(*args)
-                return sympy.Symbol(name)
-            elif expr.args:
-                args = (register_custom_functions(arg) for arg in expr.args)
-                return expr.func(*args)
-            else:
-                return expr
-        self.expr = register_custom_functions(expr)
+    def _sympy_(self):
+        return self.original_expr
+
+    @toolz.curry
+    def register(self, name, func):
+        if name in self.custom_funcs:
+            warnings.warn("Name '" + name + "' already taken", RuntimeWarning)
+        self.custom_funcs[name] = func
+        return func
+    
+    def compute(self, expr, kwargs):
+        symbols = expr.atoms(sympy.Symbol)
+        kwarg = pick(map(str, symbols), kwargs)
+        f = sympy.lambdify(symbols, expr, "numpy")
+        return f(**kwarg)
 
     def __call__(self, data):
         kwargs = {k: self.get(v, data) for k, v in self.symbols.iteritems()}
-
-        def compute(expr):
-            symbols = expr.atoms(sympy.Symbol)
-            kwarg = pick(map(str, symbols), kwargs)
-            f = sympy.lambdify(symbols, expr, "numpy")
-            return f(**kwarg)
 
         for fs, sym_func in sorted(self.funcs.iteritems(), reverse=True):
             funcname = str(sym_func.func)
@@ -59,23 +56,42 @@ class Selector(object):
                 func = self.custom_funcs[funcname]
             else:
                 func = custom_funcs[funcname]
-            args = (compute(arg) for arg in sym_func.args)
+
+            args = (self.compute(arg, kwargs) for arg in sym_func.args)
             kwargs[fs] = func(*args)
 
-        return compute(self.expr)
+        return self.compute(self.expr, kwargs)
 
-lpar = pp.Suppress("(")
-rpar = pp.Suppress(")")
+lpar, rpar = pp.Suppress("("), pp.Suppress(")")
 comma = pp.Suppress(",")
+
 digits = pp.Word(pp.nums)
 number = pp.Optional("-") + (digits + "." + digits | digits)
 number = number.setParseAction(lambda t: float("".join(t)))
 func_name = pp.Word(pp.alphanums + "_")
 
-def parse(s):
-    expr = pp.Forward()
-    args = pp.Group(pp.ZeroOrMore(expr + comma) + expr)
 
+expr = pp.Forward()
+args = pp.Group(pp.ZeroOrMore(expr + comma) + expr)
+def register_func(t):
+    fname, args = t[0], t[1]
+    args=  ",".join(map(str,args))
+    return "{fname}({args})".format(fname=fname, args=args)
+func = (func_name + lpar + args + rpar).setParseAction(register_func)
+
+# var's parseAction depends on "global" variable, so set it in parse function
+var = pp.Forward()
+atom = var | number | lpar + expr + rpar | func
+
+# order things in order-of-operations
+fact = atom + pp.ZeroOrMore("!")
+expo = fact + pp.ZeroOrMore("**" + fact)
+mult = expo + pp.ZeroOrMore(pp.oneOf("* /") + expo)
+addi = mult + pp.ZeroOrMore(pp.oneOf("+ -") + mult)
+
+expr << addi.setParseAction(lambda ts: "".join(map(str, ts)))
+
+def parse(s):
     symbols = {}
     def register_var(t):
         name = t[0]
@@ -84,28 +100,29 @@ def parse(s):
         else:
             symbols[name] = "x{}".format(len(symbols))
             return symbols[name]
-    var = pp.QuotedString('"', "\\").setParseAction(register_var)
+    var << pp.QuotedString('"', "\\").setParseAction(register_var)
 
-    def register_func(t):
-        func_name, args = t[0], t[1]
-        return "{}({})".format(func_name, ",".join(map(str, args)))
-    func = (func_name + lpar + args + rpar).setParseAction(register_func)
-    atom = var | number | lpar + expr + rpar | func
+    sympy_expr = "".join(expr.parseString(s))
+    return parse_expr(sympy_expr), symbols
 
-    fact = atom + pp.ZeroOrMore("!")
-    expo = fact + pp.ZeroOrMore("**" + fact)
-    mult = expo + pp.ZeroOrMore(pp.oneOf("* /") + expo)
-    addi = mult + pp.ZeroOrMore(pp.oneOf("+ -") + mult)
-    def f(ts):
-        return "".join(map(str, ts))
-    expr << addi.setParseAction(f)
+def replace_custom_functions(expr, funcs):
+    if isinstance(expr.func, UndefinedFunction):
+        name = "f{}".format(len(funcs))
+        funcs[name] = None # reserve name
 
-    return parse_expr("".join(expr.parseString(s))), symbols
+        args = (replace_custom_functions(arg, funcs) for arg in expr.args)
+        funcs[name] = expr.func(*args)
+        return sympy.Symbol(name)
+    elif expr.args:
+        args = (replace_custom_functions(arg, funcs) for arg in expr.args)
+        return expr.func(*args)
+    else:
+        return expr
 
-def select(expr, data=None, c_funcs=()):
+def select(expr, data=None, get=toolz.get, c_funcs=()):
     expr, symbols = parse(expr)
     symbols = {v:k for k, v in symbols.iteritems()} # reverse mapping
-    s = Selector(expr, symbols, c_funcs)
+    s = Selector(expr, symbols, custom_func=sc_funcs, get=get)
 
     if data is None:
         return s
