@@ -1,0 +1,5 @@
+numpy==1.9.1
+pyparsing==2.0.3
+sympy==0.7.5
+toolz==0.7.0
+wsgiref==0.1.2
