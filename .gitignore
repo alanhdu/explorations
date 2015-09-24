@@ -1,2 +1,5 @@
 */.ipynb_checkpoints
 */target
+
+*.swo
+*.swp
