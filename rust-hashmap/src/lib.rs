@@ -25,33 +25,39 @@ impl<T> StringMap<T> {
     pub fn set(&mut self, key: &str, value: T) -> bool {
         let mut hasher = SipHasher::default();
         key.hash(&mut hasher);
-        let hash = (hasher.finish() as usize) % self.items.len();
+        let hash = hasher.finish() as usize;
+        let len = self.items.len();
 
-        let change = if let Some(ref item) = self.items[hash] {
-            item.key == key
-        } else {
-            true
-        };
+        for i in hash..(hash + len) {
+            let index = i % len;
+            let change = if let Some(ref item) = self.items[index] {
+                item.key == key
+            } else {
+                true
+            };
 
-        if change {
-            self.items[hash] = Some(MapItem {
-                key: key.to_owned(),
-                value: value,
-            });
-            return true;
-        } else {
-            return false;
+            if change {
+                self.items[index] = Some(MapItem {
+                    key: key.to_owned(),
+                    value: value,
+                });
+                return true;
+            }
         }
+
+        false
     }
 
     pub fn get(&mut self, key: &str) -> Option<&T> {
         let mut hasher = SipHasher::default();
         key.hash(&mut hasher);
-        let hash = (hasher.finish() as usize) % self.items.len();
+        let hash = hasher.finish() as usize;
 
-        if let Some(ref item) = self.items[hash] {
-            if item.key == key {
-                return Some(&item.value);
+        if let Some(index) = self.get_index(key, hash) {
+            if let Some(ref item) = self.items[index] {
+                if item.key == key {
+                    return Some(&item.value);
+                }
             }
         }
 
@@ -61,23 +67,39 @@ impl<T> StringMap<T> {
     pub fn get_mut(&mut self, key: &str) -> Option<&mut T> {
         let mut hasher = SipHasher::default();
         key.hash(&mut hasher);
-        let hash = (hasher.finish() as usize) % self.items.len();
+        let hash = hasher.finish() as usize;
 
-        if let Some(ref mut item) = self.items[hash] {
-            if item.key == key {
-                return Some(&mut item.value);
+        if let Some(index) = self.get_index(key, hash) {
+            if let Some(ref mut item) = self.items[index] {
+                if item.key == key {
+                    return Some(&mut item.value);
+                }
             }
         }
+        None
+    }
 
+    pub fn get_index(&self, key: &str, hash: usize) -> Option<usize> {
+        let len = self.items.len();
+        for i in hash..(hash + len) {
+            let index = i % len;
+            if let Some(ref item) = self.items[index] {
+                if item.key == key {
+                    return Some(index);
+                }
+            }
+        }
         None
     }
 
     pub fn delete(&mut self, key: &str) {
         let mut hasher = SipHasher::default();
         key.hash(&mut hasher);
-        let hash = (hasher.finish() as usize) % self.items.len();
+        let hash = hasher.finish() as usize;
 
-        self.items[hash] = None;
+        if let Some(index) = self.get_index(key, hash) {
+            self.items[index] = None;
+        }
     }
 
     pub fn load(&self) -> f64 {
@@ -96,10 +118,10 @@ fn test_load() {
     assert!(h.set("hello", 5));
     assert_eq!(h.load(), 0.2);
 
-    h.set("world", 6);
+    assert!(h.set("world", 6));
     assert_eq!(h.load(), 0.4);
 
-    h.set("hello", 7);
+    assert!(h.set("hello", 7));
     assert_eq!(h.load(), 0.4);
 
     h.delete("hello");
@@ -124,33 +146,29 @@ fn test_get_set() {
 
     assert!(h.get("Not Found").is_none());
 
-    if h.set("hello", 5) {
-        assert_eq!(h.get("hello").unwrap(), &5);
-    }
-    if h.set("world", 100) {
-        assert_eq!(h.get("world").unwrap(), &100);
-    }
-    if h.set("hello", 0) {
-        assert_eq!(h.get("hello").unwrap(), &0);
-    }
+    assert!(h.set("hello", 5));
+    assert_eq!(h.get("hello").unwrap(), &5);
+
+    assert!(h.set("world", 100));
+    assert_eq!(h.get("world").unwrap(), &100);
+
+    assert!(h.set("hello", 0));
+    assert_eq!(h.get("hello").unwrap(), &0);
 }
 
 #[test]
 fn test_everything() {
     let mut h: StringMap<u32> = StringMap::new(100);
-    let mut count = 0;
 
-    for i in 0..100 {
+    for i in 1..101 {
         let key = i.to_string();
-        if h.set(&key, i) {
-            assert_eq!(h.get(&key).unwrap(), &i);
-            count += 1;
-        }
+        assert!(h.set(&key, i));
+        assert_eq!(h.get(&key).unwrap(), &i);
 
-        assert_eq!(count as f64 / 100.0, h.load());
+        assert_eq!(i as f64 / 100.0, h.load());
     }
 
-    for i in 0..100 {
+    for i in 1..101 {
         h.delete(&i.to_string());
         assert!(h.get(&i.to_string()).is_none());
     }
