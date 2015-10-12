@@ -22,10 +22,14 @@ impl<T> StringMap<T> {
         }
     }
 
-    pub fn set(&mut self, key: &str, value: T) -> bool {
+    pub fn get_hash(&self, key: &str) -> usize {
         let mut hasher = SipHasher::default();
         key.hash(&mut hasher);
-        let hash = hasher.finish() as usize;
+        return hasher.finish() as usize;
+    }
+
+    pub fn set(&mut self, key: &str, value: T) -> bool {
+        let hash = self.get_hash(key);
         let len = self.items.len();
 
         for i in hash..(hash + len) {
@@ -49,11 +53,7 @@ impl<T> StringMap<T> {
     }
 
     pub fn get(&mut self, key: &str) -> Option<&T> {
-        let mut hasher = SipHasher::default();
-        key.hash(&mut hasher);
-        let hash = hasher.finish() as usize;
-
-        if let Some(index) = self.get_index(key, hash) {
+        if let Some(index) = self.get_index(key) {
             if let Some(ref item) = self.items[index] {
                 if item.key == key {
                     return Some(&item.value);
@@ -65,11 +65,7 @@ impl<T> StringMap<T> {
     }
 
     pub fn get_mut(&mut self, key: &str) -> Option<&mut T> {
-        let mut hasher = SipHasher::default();
-        key.hash(&mut hasher);
-        let hash = hasher.finish() as usize;
-
-        if let Some(index) = self.get_index(key, hash) {
+        if let Some(index) = self.get_index(key) {
             if let Some(ref mut item) = self.items[index] {
                 if item.key == key {
                     return Some(&mut item.value);
@@ -79,7 +75,9 @@ impl<T> StringMap<T> {
         None
     }
 
-    pub fn get_index(&self, key: &str, hash: usize) -> Option<usize> {
+    pub fn get_index(&self, key: &str) -> Option<usize> {
+        let hash = self.get_hash(key);
+
         let len = self.items.len();
         for i in hash..(hash + len) {
             let index = i % len;
@@ -93,11 +91,7 @@ impl<T> StringMap<T> {
     }
 
     pub fn delete(&mut self, key: &str) {
-        let mut hasher = SipHasher::default();
-        key.hash(&mut hasher);
-        let hash = hasher.finish() as usize;
-
-        if let Some(index) = self.get_index(key, hash) {
+        if let Some(index) = self.get_index(key) {
             self.items[index] = None;
         }
     }
@@ -132,10 +126,12 @@ fn test_load() {
 fn test_overload() {
     let mut h: StringMap<u32> = StringMap::new(1);
 
+    assert!(0.0 == h.load());
     assert!(h.set("hello", 1));
 
     for i in 0..10 {
         assert!(!h.set(&i.to_string(), i));
+        assert!(h.get(&i.to_string()).is_none());
         assert!(1.0 == h.load());
     }
 }
