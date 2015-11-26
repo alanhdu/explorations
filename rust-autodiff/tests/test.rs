@@ -7,12 +7,14 @@ mod test {
 
     #[test]
     fn constant_eval() {
-        let a = Expr::Constant(10.0);
-        let b = Expr::Constant(2.0);
+        let a = Expr::constant(10.0);
+        let b = Expr::constant(2.0);
 
         assert_eq!(a.eval(), 10.0);
         assert_eq!(b.eval(), 2.0);
         assert_eq!((&a + &b).eval(), 12.0);
-        assert_eq!((&a + &b).eval(), 12.0);
+        assert_eq!((&a + &a + &a).eval(), 30.0);
+        assert_eq!(((&a + &a) + (&a + &a)).eval(), 40.0);
+        assert_eq!((&a - &b).eval(), 8.0);
     }
 }
