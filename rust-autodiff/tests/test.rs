@@ -6,6 +6,27 @@ mod test {
     use autodiff::expr::Expr;
 
     #[test]
+    fn operator_chaining() {
+        let a = Expr::constant(10.0);
+
+        (&a + &a) + (&a + &a);      // Value + Value, Ref + Ref
+        (&a + &a) + &a;             // Value + Ref
+        &a + (&a + &a);             // Ref + Value
+
+        (&a - &a) - (&a - &a);      // Value - Value, Ref - Ref
+        (&a - &a) - &a;             // Value - Ref
+        &a - (&a - &a);             // Ref - Value
+
+        (&a * &a) * (&a * &a);      // Value * Value, Ref * Ref
+        (&a * &a) * &a;             // Value * Ref
+        &a * (&a * &a);             // Ref * Value
+
+        (&a / &a) / (&a / &a);      // Value / Value, Ref / Ref
+        (&a / &a) / &a;             // Value / Ref
+        &a / (&a / &a);             // Ref / Value
+    }
+
+    #[test]
     fn constant_eval() {
         let a = Expr::constant(10.0);
         let b = Expr::constant(2.0);

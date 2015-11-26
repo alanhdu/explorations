@@ -1,5 +1,5 @@
 pub mod expr {
-    use std::ops::{Add, Sub};
+    use std::ops::{Add, Sub, Mul, Div};
     use std::rc::Rc;
 
     #[derive(Debug, Clone)]
@@ -25,9 +25,9 @@ pub mod expr {
 
     impl InnerExpr {
         fn eval(&self) -> f64 {
-            match self {
-                &InnerExpr::Constant(x) => x,
-                &InnerExpr::Arithmetic(ref x) => x.eval(),
+            match *self {
+                InnerExpr::Constant(x) => x,
+                InnerExpr::Arithmetic(ref x) => x.eval(),
             }
         }
     }
@@ -37,17 +37,20 @@ pub mod expr {
     enum Arithmetic {
         Add(Rc<InnerExpr>, Rc<InnerExpr>),
         Sub(Rc<InnerExpr>, Rc<InnerExpr>),
+        Mul(Rc<InnerExpr>, Rc<InnerExpr>),
+        Div(Rc<InnerExpr>, Rc<InnerExpr>),
     }
 
     impl Arithmetic {
         fn eval(&self) -> f64 {
-            match self {
-                &Arithmetic::Add(ref a, ref b) => a.eval() + b.eval(),
-                &Arithmetic::Sub(ref a, ref b) => a.eval() - b.eval(),
+            match *self {
+                Arithmetic::Add(ref a, ref b) => a.eval() + b.eval(),
+                Arithmetic::Sub(ref a, ref b) => a.eval() - b.eval(),
+                Arithmetic::Mul(ref a, ref b) => a.eval() * b.eval(),
+                Arithmetic::Div(ref a, ref b) => a.eval() / b.eval(),
             }
         }
     }
-
 
     macro_rules! operator_overload {
         ($trait_name:ident, $struct_name:ident, $func_name:ident, $arith_type:ident) => {
@@ -88,4 +91,6 @@ pub mod expr {
 
     operator_overload!(Add, Expr, add, Add);
     operator_overload!(Sub, Expr, sub, Sub);
+    operator_overload!(Mul, Expr, mul, Mul);
+    operator_overload!(Div, Expr, div, Div);
 }
