@@ -1,4 +1,5 @@
 from collections import namedtuple
+import math
 
 class Expr:
     def eval(self, **kwargs):
@@ -18,6 +19,9 @@ class Expr:
 
     def __truediv__(self, other):
         return Divide(self, other)
+
+    def __pow__(self, other):
+        return Pow(self, other)
 
 class Variable(Expr, namedtuple("Variable", ["name"])):
     def eval(self, **kwargs):
@@ -73,3 +77,20 @@ class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
 
         # low d high - high d-low, over denominator squared we go!
         return (low * dhigh - high * dlow) / low ** 2
+
+class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
+    def eval(self, **kwargs):
+        return self.expr1.eval(**kwargs) ** self.expr2.eval(**kwargs)
+
+    def forward_diff(self, **kwargs):
+        # D_x[f ** g] = f ** (g - 1) * (g * f' + f * log f * g'
+
+        base = self.expr1.eval(**kwargs)
+        dbase = self.expr1.forward_diff(**kwargs)
+        exp = self.expr2.eval(**kwargs)
+        dexp = self.expr2.forward_diff(**kwargs)
+
+        if base == 0:       # avoid MathDomainError
+            return 0
+
+        return base ** (exp - 1) * (exp * dbase + base * math.log(base) * dexp)

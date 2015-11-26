@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 import autodiff
@@ -12,6 +14,7 @@ def test_constant_expr():
     assert (x * y).eval() == 20
     assert (x - y).eval() == 8
     assert (x / y).eval() == 5
+    assert (x ** y).eval() == 100
 
     assert (x + x + x).eval() == 30
     assert (x - x - x).eval() == -10
@@ -27,6 +30,7 @@ def test_variable_expr():
     assert (x - y).eval(x=5) == -5
     assert (x * y).eval(x=5) == 50
     assert (x / y).eval(x=5) == 0.5
+    assert (x ** y).eval(x=2) == 2 ** 10
 
     with pytest.raises(KeyError):
         x.eval()
@@ -54,3 +58,22 @@ def test_arithmetic_diff():
     assert expr.forward_diff(x=0) == 0
     assert expr.forward_diff(x=1) == 51
     assert expr.forward_diff(x=2) == 51 * 2 ** 50
+
+def test_power_diff():
+    x = autodiff.Variable("x")
+
+    expr = x ** autodiff.Constant(2)
+    assert expr.forward_diff(x=0) == 0
+    assert expr.forward_diff(x=1) == 2
+    assert expr.forward_diff(x=2) == 4
+
+    expr = autodiff.Constant(math.e) ** x
+    assert expr.forward_diff(x=0) == 1
+    assert expr.forward_diff(x=1) == math.e
+    assert expr.forward_diff(x=2) == math.e ** 2
+
+    expr = x
+    for i in range(100):
+        expr = expr ** x
+
+    assert expr.forward_diff(x=1) == 1
