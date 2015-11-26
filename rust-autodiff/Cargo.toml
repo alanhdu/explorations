@@ -1,0 +1,4 @@
+[package]
+name = "autodiff"
+version = "0.1.0"
+authors = ["Alan Du <alanhdu@gmail.com>"]
