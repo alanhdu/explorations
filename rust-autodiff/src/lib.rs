@@ -49,58 +49,43 @@ pub mod expr {
     }
 
 
-    impl<'a> Add for &'a Expr {
-        type Output = Expr;
-        fn add(self, other: &'a Expr) -> Expr {
-            let lhs = self.expr.clone();
-            let rhs = other.expr.clone();
-            let inner_expr = InnerExpr::Arithmetic(Arithmetic::Add(lhs, rhs));
-
-            Expr {expr: Rc::new(inner_expr)}
+    macro_rules! operator_overload {
+        ($trait_name:ident, $struct_name:ident, $func_name:ident, $arith_type:ident) => {
+            impl $trait_name<$struct_name> for $struct_name {
+                type Output=$struct_name;
+                fn $func_name(self, other: $struct_name) -> $struct_name {
+                    let arithmetic = Arithmetic::$arith_type(self.expr.clone(),
+                                                             other.expr.clone());
+                    Expr {expr: Rc::new(InnerExpr::Arithmetic(arithmetic))}
+                }
+            }
+            impl<'a> $trait_name for &'a $struct_name {
+                type Output=$struct_name;
+                fn $func_name(self, other: &'a $struct_name) -> $struct_name {
+                    let arithmetic = Arithmetic::$arith_type(self.expr.clone(),
+                                                             other.expr.clone());
+                    Expr {expr: Rc::new(InnerExpr::Arithmetic(arithmetic))}
+                }
+            }
+            impl<'a> $trait_name<&'a $struct_name> for $struct_name {
+                type Output=$struct_name;
+                fn $func_name(self, other: &'a $struct_name) -> $struct_name {
+                    let arithmetic = Arithmetic::$arith_type(self.expr.clone(),
+                                                             other.expr.clone());
+                    Expr {expr: Rc::new(InnerExpr::Arithmetic(arithmetic))}
+                }
+            }
+            impl<'a> $trait_name<$struct_name> for &'a $struct_name {
+                type Output=$struct_name;
+                fn $func_name(self, other: $struct_name) -> $struct_name {
+                    let arithmetic = Arithmetic::$arith_type(self.expr.clone(),
+                                                             other.expr.clone());
+                    Expr {expr: Rc::new(InnerExpr::Arithmetic(arithmetic))}
+                }
+            }
         }
     }
 
-    impl<'a> Add<Expr> for &'a Expr {
-        type Output = Expr;
-        fn add(self, other: Expr) -> Expr {
-            let lhs = self.expr.clone();
-            let rhs = other.expr.clone();
-            let inner_expr = InnerExpr::Arithmetic(Arithmetic::Add(lhs, rhs));
-
-            Expr {expr: Rc::new(inner_expr)}
-        }
-    }
-
-    impl Add for Expr {
-        type Output = Expr;
-        fn add(self, other: Expr) -> Expr {
-            let lhs = self.expr.clone();
-            let rhs = other.expr.clone();
-            let inner_expr = InnerExpr::Arithmetic(Arithmetic::Add(lhs, rhs));
-
-            Expr {expr: Rc::new(inner_expr)}
-        }
-    }
-
-    impl<'a> Add<&'a Expr> for Expr {
-        type Output = Expr;
-        fn add(self, other: &'a Expr) -> Expr {
-            let lhs = self.expr.clone();
-            let rhs = other.expr.clone();
-            let inner_expr = InnerExpr::Arithmetic(Arithmetic::Add(lhs, rhs));
-
-            Expr {expr: Rc::new(inner_expr)}
-        }
-    }
-
-    impl<'a> Sub for &'a Expr {
-        type Output = Expr;
-        fn sub(self, other: &'a Expr) -> Expr {
-            let lhs = self.expr.clone();
-            let rhs = other.expr.clone();
-            let inner_expr = InnerExpr::Arithmetic(Arithmetic::Sub(lhs, rhs));
-
-            Expr {expr: Rc::new(inner_expr)}
-        }
-    }
+    operator_overload!(Add, Expr, add, Add);
+    operator_overload!(Sub, Expr, sub, Sub);
 }
