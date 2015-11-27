@@ -1,4 +1,5 @@
 extern crate autodiff;
+#[macro_use] extern crate maplit;
 
 #[cfg(test)]
 mod test {
@@ -51,9 +52,7 @@ mod test {
         fn prop(a: f64, b: f64) {
             let x = Expr::variable("a");
             let y = Expr::variable("b");
-            let mut values = HashMap::new();
-            values.insert("a".to_owned(), a);
-            values.insert("b".to_owned(), b);
+            let values = hashmap!{"a".to_owned() => a, "b".to_owned() => b};
 
             assert_eq!(a + b, (&x + &y).eval(&values));
             assert_eq!(a - b, (&x - &y).eval(&values));
@@ -72,10 +71,8 @@ mod test {
     fn test_arithmetic_diff1() {
         fn prop(a: f64) {
             let x = Expr::variable("a");
-            let mut direction = HashMap::new();
-            let mut values = HashMap::new();
-            direction.insert("a".to_owned(), 1.0);
-            values.insert("a".to_owned(), a);
+            let direction = hashmap!{"a".to_owned() => 1.0};
+            let values = hashmap!{"a".to_owned() => a};
 
             let expr = (&x + Expr::constant(10.0)) * (&x + Expr::constant(5.0));
             // D_x[expr] = D_x[x ** 2 + 15 x + 50] = 2x + 15
@@ -91,10 +88,8 @@ mod test {
     fn test_arithmetic_diff2() {
         fn prop(a: f64) {
             let x = Expr::variable("a");
-            let mut direction = HashMap::new();
-            let mut values = HashMap::new();
-            direction.insert("a".to_owned(), 1.0);
-            values.insert("a".to_owned(), a);
+            let direction = hashmap!{"a".to_owned() => 1.0};
+            let values = hashmap!{"a".to_owned() => a};
 
             let expr = (&x - Expr::constant(10.0)) / (&x * &x);
             // D_x[expr] = D_x[(x - 10) / x ** 2] = - 1 / x ** 2 + 20 / x ** 3
@@ -111,10 +106,8 @@ mod test {
     fn test_power_diff1() {
         fn prop(a: f64) {
             let x = Expr::variable("a");
-            let mut direction = HashMap::new();
-            let mut values = HashMap::new();
-            direction.insert("a".to_owned(), 1.0);
-            values.insert("a".to_owned(), a);
+            let direction = hashmap!{"a".to_owned() => 1.0};
+            let values = hashmap!{"a".to_owned() => a};
 
             let expr = &x ^ Expr::constant(3.0);
             assert_eq!(expr.forward_diff(&direction, &values),
@@ -130,10 +123,8 @@ mod test {
     fn test_power_diff2() {
         fn prop(a: f64) {
             let x = Expr::variable("a");
-            let mut direction = HashMap::new();
-            let mut values = HashMap::new();
-            direction.insert("a".to_owned(), 1.0);
-            values.insert("a".to_owned(), a);
+            let direction = hashmap!{"a".to_owned() => 1.0};
+            let values = hashmap!{"a".to_owned() => a};
 
             let expr = Expr::constant(consts::E) ^ x;
             assert_eq!(expr.forward_diff(&direction, &values),
@@ -148,8 +139,7 @@ mod test {
     #[test]
     fn test_power_nested_diff() {
         let x = Expr::variable("a");
-        let mut values = HashMap::new();
-        values.insert("a".to_owned(), 1.0);
+        let values = hashmap!{"a".to_owned() => 1.0};
 
         let mut expr = &x ^ &x;
         for _ in 0..1000 {
