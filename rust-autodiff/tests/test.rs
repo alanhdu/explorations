@@ -147,4 +147,27 @@ mod test {
         }
         assert_eq!(expr.forward_diff(&values, &values), 1.0);
     }
+
+    #[test]
+    fn test_multi_direction_diff() {
+        fn prop(a: f64, b: f64) {
+            let x = Expr::variable("x");
+            let y = Expr::variable("y");
+            let diff_x = hashmap!{"x".to_owned() => 1.0, "y".to_owned() => 0.0};
+            let diff_y = hashmap!{"x".to_owned() => 0.0, "y".to_owned() => 1.0};
+            let expr = &x * &y + &x / &y;
+
+            let values = hashmap!{"x".to_owned() => a, "y".to_owned() => b};
+            // D_x[expr] = y + 1 / y
+            assert_eq!(expr.forward_diff(&diff_x, &values),
+                       b + 1.0 / b);
+            // D_y[expr] = x - x / y **2
+            assert_eq!(expr.forward_diff(&diff_y, &values),
+                       a * (1.0 - b.powi(-2)));
+        }
+
+        prop(1.0, 2.0);
+        prop(2.0, 2.0);
+        prop(2.0, 5.0);
+    }
 }
