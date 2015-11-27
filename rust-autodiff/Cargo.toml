@@ -2,6 +2,3 @@
 name = "autodiff"
 version = "0.1.0"
 authors = ["Alan Du <alanhdu@gmail.com>"]
-
-[dev-dependencies]
-quickcheck = "0.2"

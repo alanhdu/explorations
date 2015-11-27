@@ -1,4 +1,5 @@
 pub mod expr {
+    use std::collections::HashMap;
     use std::ops::{Add, Sub, Mul, Div};
     use std::rc::Rc;
 
@@ -11,6 +12,7 @@ pub mod expr {
     enum InnerExpr {
         Arithmetic(Arithmetic),
         Constant(f64),
+        Variable(String),
     }
 
     impl Expr {
@@ -18,16 +20,34 @@ pub mod expr {
             Expr {expr: Rc::new(InnerExpr::Constant(value))}
         }
 
-        pub fn eval(&self) -> f64 {
-            self.expr.eval()
+        pub fn variable(name: &str) -> Expr {
+            Expr {expr: Rc::new(InnerExpr::Variable(name.to_owned()))}
+        }
+
+        pub fn eval(&self, values: &HashMap<String, f64>) -> f64 {
+            self.expr.eval(values)
+        }
+
+        pub fn forward_diff(&self, direction: &HashMap<String, f64>,
+                            point: &HashMap<String, f64>) -> f64 {
+            self.expr.forward_diff(direction, point)
         }
     }
 
     impl InnerExpr {
-        fn eval(&self) -> f64 {
+        fn eval(&self, values: &HashMap<String, f64>) -> f64 {
             match *self {
                 InnerExpr::Constant(x) => x,
-                InnerExpr::Arithmetic(ref x) => x.eval(),
+                InnerExpr::Arithmetic(ref x) => x.eval(values),
+                InnerExpr::Variable(ref x) => *values.get(x).unwrap(),
+            }
+        }
+        fn forward_diff(&self, direction: &HashMap<String, f64>,
+                            point: &HashMap<String, f64>) -> f64 {
+            match *self {
+                InnerExpr::Constant(_) => 0.0,
+                InnerExpr::Arithmetic(ref x) => x.forward_diff(direction, point),
+                InnerExpr::Variable(ref x) => *direction.get(x).unwrap(),
             }
         }
     }
@@ -42,12 +62,40 @@ pub mod expr {
     }
 
     impl Arithmetic {
-        fn eval(&self) -> f64 {
+        fn eval(&self, values: &HashMap<String, f64>) -> f64 {
             match *self {
-                Arithmetic::Add(ref a, ref b) => a.eval() + b.eval(),
-                Arithmetic::Sub(ref a, ref b) => a.eval() - b.eval(),
-                Arithmetic::Mul(ref a, ref b) => a.eval() * b.eval(),
-                Arithmetic::Div(ref a, ref b) => a.eval() / b.eval(),
+                Arithmetic::Add(ref a, ref b) => a.eval(values) + b.eval(values),
+                Arithmetic::Sub(ref a, ref b) => a.eval(values) - b.eval(values),
+                Arithmetic::Mul(ref a, ref b) => a.eval(values) * b.eval(values),
+                Arithmetic::Div(ref a, ref b) => a.eval(values) / b.eval(values),
+            }
+        }
+        fn forward_diff(&self, direction: &HashMap<String, f64>,
+                            point: &HashMap<String, f64>) -> f64 {
+            match *self {
+                Arithmetic::Add(ref a, ref b) => {
+                    let lhs = a.forward_diff(direction, point);
+                    let rhs = b.forward_diff(direction, point);
+                    lhs + rhs
+                },
+                Arithmetic::Sub(ref a, ref b) => {
+                    let lhs = a.forward_diff(direction, point);
+                    let rhs = b.forward_diff(direction, point);
+                    lhs - rhs
+                }
+                Arithmetic::Mul(ref a, ref b) => {
+                    (a.eval(point) * b.forward_diff(direction, point) +
+                        b.eval(point) * a.forward_diff(direction, point))
+                }
+                Arithmetic::Div(ref a, ref b) => {
+                    let high= a.eval(point);
+                    let low = b.eval(point);
+                    let dhigh = a.forward_diff(direction, point);
+                    let dlow = b.forward_diff(direction, point);
+
+                    // low dhigh - high dlow, over denominator squared we go
+                    (low * dhigh - high * dlow) / (low.powi(2))
+                }
             }
         }
     }
