@@ -1,6 +1,6 @@
 pub mod expr {
     use std::collections::HashMap;
-    use std::ops::{Add, Sub, Mul, Div};
+    use std::ops::{Add, Sub, Mul, Div, BitXor};
     use std::rc::Rc;
 
     #[derive(Debug, Clone)]
@@ -59,6 +59,7 @@ pub mod expr {
         Sub(Rc<InnerExpr>, Rc<InnerExpr>),
         Mul(Rc<InnerExpr>, Rc<InnerExpr>),
         Div(Rc<InnerExpr>, Rc<InnerExpr>),
+        Pow(Rc<InnerExpr>, Rc<InnerExpr>),
     }
 
     impl Arithmetic {
@@ -68,6 +69,7 @@ pub mod expr {
                 Arithmetic::Sub(ref a, ref b) => a.eval(values) - b.eval(values),
                 Arithmetic::Mul(ref a, ref b) => a.eval(values) * b.eval(values),
                 Arithmetic::Div(ref a, ref b) => a.eval(values) / b.eval(values),
+                Arithmetic::Pow(ref a, ref b) => a.eval(values).powf(b.eval(values)),
             }
         }
         fn forward_diff(&self, direction: &HashMap<String, f64>,
@@ -82,11 +84,11 @@ pub mod expr {
                     let lhs = a.forward_diff(direction, point);
                     let rhs = b.forward_diff(direction, point);
                     lhs - rhs
-                }
+                },
                 Arithmetic::Mul(ref a, ref b) => {
                     (a.eval(point) * b.forward_diff(direction, point) +
                         b.eval(point) * a.forward_diff(direction, point))
-                }
+                },
                 Arithmetic::Div(ref a, ref b) => {
                     let high= a.eval(point);
                     let low = b.eval(point);
@@ -95,6 +97,20 @@ pub mod expr {
 
                     // low dhigh - high dlow, over denominator squared we go
                     (low * dhigh - high * dlow) / (low.powi(2))
+                },
+                Arithmetic::Pow(ref a, ref b) => {
+                    // D_x(f ** g) = f ** (g - 1) * (gf' + fg' log f)
+                    let base = a.eval(point);
+                    let exp = b.eval(point);
+                    let dbase = a.forward_diff(direction, point);
+                    let dexp = b.forward_diff(direction, point);
+
+                    // low dhigh - high dlow, over denominator squared we go
+                    if base == 0.0 {
+                        0.0
+                    } else {
+                        base.powf(exp - 1.0) * (exp * dbase + base * dexp * base.ln())
+                    }
                 }
             }
         }
@@ -141,4 +157,5 @@ pub mod expr {
     operator_overload!(Sub, Expr, sub, Sub);
     operator_overload!(Mul, Expr, mul, Mul);
     operator_overload!(Div, Expr, div, Div);
+    operator_overload!(BitXor, Expr, bitxor, Pow);
 }

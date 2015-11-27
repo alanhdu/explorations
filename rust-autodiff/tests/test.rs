@@ -3,6 +3,7 @@ extern crate autodiff;
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
+    use std::f64::consts;
     use autodiff::expr::Expr;
 
     #[test]
@@ -36,8 +37,9 @@ mod test {
             assert_eq!(a - b, (&x - &y).eval(&values));
             assert_eq!(a * b, (&x * &y).eval(&values));
             assert_eq!(a / b, (&x / &y).eval(&values));
-            assert_eq!(a + b * (a / (a - b)),
-                       (&x + &y * (&x / (&x - &y))).eval(&values));
+            assert_eq!(a.powf(b), (&x ^ &y).eval(&values));
+            assert_eq!(a + b * (a / (a - b).powf(a)),
+                       (&x + &y * (&x / ((&x - &y) ^ &x))).eval(&values));
         }
         prop(0.0, 1.0);
         prop(0.0, 5.0);
@@ -57,8 +59,9 @@ mod test {
             assert_eq!(a - b, (&x - &y).eval(&values));
             assert_eq!(a * b, (&x * &y).eval(&values));
             assert_eq!(a / b, (&x / &y).eval(&values));
-            assert_eq!(a + b * (a / (a - b)),
-                       (&x + &y * (&x / (&x - &y))).eval(&values));
+            assert_eq!(a.powf(b), (&x ^ &y).eval(&values));
+            assert_eq!(a + b * (a / (a - b).powf(a)),
+                       (&x + &y * (&x / ((&x - &y) ^ &x))).eval(&values));
         }
         prop(0.0, 1.0);
         prop(0.0, 5.0);
@@ -76,7 +79,6 @@ mod test {
 
             let expr = (&x + Expr::constant(10.0)) * (&x + Expr::constant(5.0));
             // D_x[expr] = D_x[x ** 2 + 15 x + 50] = 2x + 15
-            // a
             assert_eq!(expr.forward_diff(&direction, &values),
                        2.0 * a + 15.0);
         }
@@ -94,14 +96,65 @@ mod test {
             direction.insert("a".to_owned(), 1.0);
             values.insert("a".to_owned(), a);
 
-            let expr = (&x + Expr::constant(10.0)) / (&x * &x);
-            // D_x[expr] = D_x[(x + 10) / x ** 2] = - 1 / x ** 2 - 20 / x ** 3
+            let expr = (&x - Expr::constant(10.0)) / (&x * &x);
+            // D_x[expr] = D_x[(x - 10) / x ** 2] = - 1 / x ** 2 + 20 / x ** 3
             assert_eq!(expr.forward_diff(&direction, &values),
-                       -a.powi(-2) - 20.0 * a.powi(-3));
+                       -a.powi(-2) + 20.0 * a.powi(-3));
         }
 
         prop(1.0);
         prop(10.0);
-        prop(23.4);
+        prop(0.34);
+    }
+
+    #[test]
+    fn test_power_diff1() {
+        fn prop(a: f64) {
+            let x = Expr::variable("a");
+            let mut direction = HashMap::new();
+            let mut values = HashMap::new();
+            direction.insert("a".to_owned(), 1.0);
+            values.insert("a".to_owned(), a);
+
+            let expr = &x ^ Expr::constant(3.0);
+            assert_eq!(expr.forward_diff(&direction, &values),
+                       3.0 * a.powi(2));
+        }
+
+        prop(1.0);
+        prop(10.0);
+        prop(0.34);
+    }
+
+    #[test]
+    fn test_power_diff2() {
+        fn prop(a: f64) {
+            let x = Expr::variable("a");
+            let mut direction = HashMap::new();
+            let mut values = HashMap::new();
+            direction.insert("a".to_owned(), 1.0);
+            values.insert("a".to_owned(), a);
+
+            let expr = Expr::constant(consts::E) ^ x;
+            assert_eq!(expr.forward_diff(&direction, &values),
+                       consts::E.powf(a));
+        }
+
+        prop(1.0);
+        prop(10.0);
+        prop(0.34);
+    }
+
+    #[test]
+    fn test_power_nested_diff() {
+        let x = Expr::variable("a");
+        let mut values = HashMap::new();
+        values.insert("a".to_owned(), 1.0);
+
+        let mut expr = &x ^ &x;
+        for _ in 0..1000 {
+            expr = expr ^ &x;
+        }
+        assert_eq!(expr.forward_diff(&values, &values), 1.0);
     }
 }
