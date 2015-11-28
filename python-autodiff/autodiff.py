@@ -1,14 +1,36 @@
 from collections import namedtuple
 import math
 
+PointType = "Dict[str, float]"
+
 class Expr:
-    def eval(self, point):
+    def eval(self, point: PointType) -> float:
+        """ Evaluate the expr @ the given point.
+
+        :param point: Dict[str, float]. Maps variable names to their value
+        :returns float:
+        """
         raise NotImplementedError("eval not implemented")
 
-    def forward_diff(self, direction, point):
+    def forward_diff(self, direction: PointType, point: PointType) -> float:
+        """ Evaulate the directional derivative of a direction @ a point via
+        forward-mode automatic differentiation
+
+        :param point: Dict[str, float]. Maps variable names to their value
+        :param direction: Dict[str, float]. Maps variable names to their value
+        :returns float:
+        """
         raise NotImplementedError("forward_diff not implemented")
 
-    def reverse_diff(self, point):
+    def reverse_diff(self, point: PointType) -> PointType:
+        """ Evaulate the gradient of a direction @ a point via
+        reverse-mode automatic differentiation.
+
+        Internally dispatches to subclass-specific `_reverse_diff`
+
+        :param point: Dict[str, float]. Maps variable names to their value
+        :returns Dict[str, float]: Returns gradient @ point
+        """
         x = {key: 0 for key in point}
         self._reverse_diff(point, 1, x)
         return x
