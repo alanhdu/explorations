@@ -81,3 +81,40 @@ def test_power_diff():
         expr = expr ** x
 
     assert expr.forward_diff(direction, dict(x=1)) == 1
+
+points = [{"x": 1, "y": 1}, {"x": 0.5, "y": 1.1}, {"x": 13.4, "y": 0.2}]
+
+@pytest.mark.parametrize("point", points)
+def test_reverse_diff1(point):
+    x = autodiff.Variable('x')
+    y = autodiff.Variable('y')
+
+    expr = x * y + x / y
+
+    # grad expr = {"x": y + 1 / y, "y": x - x / y ** 2}
+    x, y = point["x"], point["y"]
+    assert expr.reverse_diff(point) == {"x": y + 1 / y,
+                                        "y": x - x / y ** 2}
+@pytest.mark.parametrize("point", points)
+def test_reverse_diff2(point):
+    x = autodiff.Variable('x')
+    y = autodiff.Variable('y')
+
+    expr = x * x * y - x * y * y
+
+    # grad expr = {"x": y ** 2 - 2xy, "y": 2xy - x ** 2}
+    x, y = point["x"], point["y"]
+    assert expr.reverse_diff(point) == {"x": 2 * x * y - y ** 2,
+                                        "y": x ** 2 - 2 * x * y}
+
+@pytest.mark.parametrize("point", points)
+def test_reverse_diff3(point):
+    x = autodiff.Variable('x')
+    y = autodiff.Variable('y')
+
+    expr = x ** y
+
+    # grad expr = {"x": x ** (y - 1), "y": ln(x) * x ** y }
+    x, y = point["x"], point["y"]
+    assert expr.reverse_diff(point) == {"x": x ** (y - 1),
+                                        "y": math.log(x) * x ** y}

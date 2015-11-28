@@ -5,8 +5,16 @@ class Expr:
     def eval(self, point):
         raise NotImplementedError("eval not implemented")
 
-    def diff(self, direction, point):
-        raise NotImplementedError("diff not implemented")
+    def forward_diff(self, direction, point):
+        raise NotImplementedError("forward_diff not implemented")
+
+    def reverse_diff(self, point):
+        x = {key: 0 for key in point}
+        self._reverse_diff(point, 1, x)
+        return x
+
+    def _reverse_diff(self, point, adjoint, answer):
+        raise NotImplementedError("reverse_diff not implemented")
 
     def __add__(self, other):
         return Add(self, other)
@@ -30,12 +38,17 @@ class Variable(Expr, namedtuple("Variable", ["name"])):
     def forward_diff(self, direction, point):
         return direction[self.name]
 
+    def _reverse_diff(self, point, adjoint, answer):
+        answer[self.name] += adjoint
 class Constant(Expr, namedtuple("Constant", ["value"])):
     def eval(self, point):
         return self.value
 
     def forward_diff(self, direction, point):
         return 0
+
+    def _reverse_diff(self, point, adjoint, answer):
+        pass
 
 class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
     def eval(self, point):
@@ -45,6 +58,10 @@ class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
         return self.expr1.forward_diff(direction, point) + \
             self.expr2.forward_diff(direction, point)
 
+    def _reverse_diff(self, point, adjoint, answer):
+        self.expr1._reverse_diff(point, adjoint, answer)
+        self.expr2._reverse_diff(point, adjoint, answer)
+
 class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
     def eval(self, point):
         return self.expr1.eval(point) - self.expr2.eval(point)
@@ -52,6 +69,10 @@ class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
     def forward_diff(self, direction, point):
         return self.expr1.forward_diff(direction, point) - \
             self.expr2.forward_diff(direction, point)
+
+    def _reverse_diff(self, point, adjoint, answer):
+        self.expr1._reverse_diff(point, adjoint, answer)
+        self.expr2._reverse_diff(point, -adjoint, answer)
 
 class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
     def eval(self, point):
@@ -65,6 +86,12 @@ class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
 
         return x1 * d2 + x2 * d1
 
+    def _reverse_diff(self, point, adjoint, answer):
+        lhs = self.expr1.eval(point)
+        rhs = self.expr2.eval(point)
+        self.expr1._reverse_diff(point, adjoint * rhs, answer)
+        self.expr2._reverse_diff(point, adjoint * lhs, answer)
+
 class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
     def eval(self, point):
         return self.expr1.eval(point) / self.expr2.eval(point)
@@ -77,6 +104,12 @@ class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
 
         # low d high - high d-low, over denominator squared we go!
         return (low * dhigh - high * dlow) / low ** 2
+
+    def _reverse_diff(self, point, adjoint, answer):
+        lhs = self.expr1.eval(point)
+        rhs = self.expr2.eval(point)
+        self.expr1._reverse_diff(point, adjoint / rhs, answer)
+        self.expr2._reverse_diff(point, -adjoint * lhs / rhs ** 2, answer)
 
 class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
     def eval(self, point):
@@ -94,3 +127,12 @@ class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
             return 0
 
         return base ** (exp - 1) * (exp * dbase + base * math.log(base) * dexp)
+
+    def _reverse_diff(self, point, adjoint, answer):
+        base = self.expr1.eval(point)
+        exp = self.expr2.eval(point)
+
+        self.expr1._reverse_diff(point, adjoint * base ** (exp - 1), answer)
+        self.expr2._reverse_diff(point,
+                                 adjoint * math.log(base) * base ** exp,
+                                 answer)
