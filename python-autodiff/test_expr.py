@@ -116,5 +116,5 @@ def test_reverse_diff3(point):
 
     # grad expr = {"x": x ** (y - 1), "y": ln(x) * x ** y }
     x, y = point["x"], point["y"]
-    assert expr.reverse_diff(point) == {"x": x ** (y - 1),
+    assert expr.reverse_diff(point) == {"x": y * x ** (y - 1),
                                         "y": math.log(x) * x ** y}

@@ -168,7 +168,8 @@ class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
         base = self.expr1.eval(point)
         exp = self.expr2.eval(point)
 
-        self.expr1._reverse_diff(point, adjoint * base ** (exp - 1), answer)
+        self.expr1._reverse_diff(point, adjoint * exp * base ** (exp - 1),
+                                 answer)
         self.expr2._reverse_diff(point,
                                  adjoint * math.log(base) * base ** exp,
                                  answer)
