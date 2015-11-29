@@ -2,7 +2,6 @@ from collections import namedtuple
 import math
 
 Point = "Dict[str, float]"
-ForwardDiff = namedtuple("ForwardDiff", ["value", "diff"])
 
 class Expr:
     def eval(self, point: Point) -> float:
@@ -14,7 +13,7 @@ class Expr:
         return self._eval(point, {})
 
     def _eval(self, point: Point, cache) -> float:
-        raise NotImplementedError("eval not implemented")
+        raise NotImplementedError
 
     def forward_diff(self, direction: Point, point: Point) -> float:
         """ Evaulate the directional derivative of a direction @ a point via
@@ -24,10 +23,12 @@ class Expr:
         :param direction: Dict[str, float]. Maps variable names to their value
         :returns float:
         """
-        return self._forward_diff(direction, point).diff
+        cache = {}
+        self._eval(point, cache)
+        return self._forward_diff(direction, point, cache)
 
-    def _forward_diff(self, direction: Point, point: Point) -> ForwardDiff:
-        raise NotImplementedError("forward_diff not implemented")
+    def _forward_diff(self, direction: Point, point: Point, cache) -> float:
+        raise NotImplementedError
 
     def reverse_diff(self, point: Point) -> Point:
         """ Evaulate the gradient of a direction @ a point via
@@ -38,12 +39,15 @@ class Expr:
         :param point: Dict[str, float]. Maps variable names to their value
         :returns Dict[str, float]: Returns gradient @ point
         """
+        cache = {}
+        self._eval(point, cache)
         x = {key: 0 for key in point}
-        self._reverse_diff(point, 1, x)
+        self._reverse_diff(point, 1, x, cache)
         return x
 
-    def _reverse_diff(self, point: Point, adjoint: float, answer: Point):
-        raise NotImplementedError("reverse_diff not implemented")
+    def _reverse_diff(self, point: Point, adjoint: float,
+                      gradient: Point, cache):
+        raise NotImplementedError
 
     def __add__(self, other):
         return Add(self, other)
@@ -62,22 +66,24 @@ class Expr:
 
 class Variable(Expr, namedtuple("Variable", ["name"])):
     def _eval(self, point, cache):
+        cache[id(self)] = point[self.name]
         return point[self.name]
 
-    def _forward_diff(self, direction, point):
-        return ForwardDiff(value=point[self.name], diff=direction[self.name])
+    def _forward_diff(self, direction, point, cache):
+        return direction[self.name]
 
-    def _reverse_diff(self, point, adjoint, answer):
-        answer[self.name] += adjoint
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        gradient[self.name] += adjoint
 
 class Constant(Expr, namedtuple("Constant", ["value"])):
     def _eval(self, point, cache):
+        cache[id(self)] = self.value
         return self.value
 
-    def _forward_diff(self, direction, point):
-        return ForwardDiff(value=self.value, diff=0)
+    def _forward_diff(self, direction, point, cache):
+        return 0
 
-    def _reverse_diff(self, point, adjoint, answer):
+    def _reverse_diff(self, point, ajoint, gradient, cache):
         pass
 
 class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
@@ -87,16 +93,13 @@ class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
             cache[id(self)] = eval1(point, cache) + eval2(point, cache)
         return cache[id(self)]
 
-    def _forward_diff(self, direction, point):
-        lhs = self.expr1._forward_diff(direction, point)
-        rhs = self.expr2._forward_diff(direction, point)
+    def _forward_diff(self, direction, point, cache):
+        return (self.expr1._forward_diff(direction, point, cache) +
+                self.expr2._forward_diff(direction, point, cache))
 
-        return ForwardDiff(value=lhs.value + rhs.value,
-                           diff=lhs.diff + rhs.diff)
-
-    def _reverse_diff(self, point, adjoint, answer):
-        self.expr1._reverse_diff(point, adjoint, answer)
-        self.expr2._reverse_diff(point, adjoint, answer)
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        self.expr1._reverse_diff(point, adjoint, gradient, cache)
+        self.expr2._reverse_diff(point, adjoint, gradient, cache)
 
 class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
     def _eval(self, point, cache):
@@ -105,16 +108,13 @@ class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
             cache[id(self)] = eval1(point, cache) - eval2(point, cache)
         return cache[id(self)]
 
-    def _forward_diff(self, direction, point):
-        lhs = self.expr1._forward_diff(direction, point)
-        rhs = self.expr2._forward_diff(direction, point)
+    def _forward_diff(self, direction, point, cache):
+        return (self.expr1._forward_diff(direction, point, cache) -
+                self.expr2._forward_diff(direction, point, cache))
 
-        return ForwardDiff(value=lhs.value - rhs.value,
-                           diff=lhs.diff - rhs.diff)
-
-    def _reverse_diff(self, point, adjoint, answer):
-        self.expr1._reverse_diff(point, adjoint, answer)
-        self.expr2._reverse_diff(point, -adjoint, answer)
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        self.expr1._reverse_diff(point, adjoint, gradient, cache)
+        self.expr2._reverse_diff(point, -adjoint, gradient, cache)
 
 class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
     def _eval(self, point, cache):
@@ -123,18 +123,18 @@ class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
             cache[id(self)] = eval1(point, cache) * eval2(point, cache)
         return cache[id(self)]
 
-    def _forward_diff(self, direction, point):
-        lhs = self.expr1._forward_diff(direction, point)
-        rhs = self.expr2._forward_diff(direction, point)
+    def _forward_diff(self, direction, point, cache):
+        lhs = cache[id(self.expr1)]
+        rhs = cache[id(self.expr2)]
 
-        return ForwardDiff(value=lhs.value * rhs.value,
-                           diff=lhs.diff * rhs.value + rhs.diff * lhs.value)
+        return (rhs * self.expr1._forward_diff(direction, point, cache) +
+                lhs * self.expr2._forward_diff(direction, point, cache))
 
-    def _reverse_diff(self, point, adjoint, answer):
-        lhs = self.expr1.eval(point)
-        rhs = self.expr2.eval(point)
-        self.expr1._reverse_diff(point, adjoint * rhs, answer)
-        self.expr2._reverse_diff(point, adjoint * lhs, answer)
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        lhs = cache[id(self.expr1)]
+        rhs = cache[id(self.expr2)]
+        self.expr1._reverse_diff(point, adjoint * rhs, gradient, cache)
+        self.expr2._reverse_diff(point, adjoint * lhs, gradient, cache)
 
 class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
     def _eval(self, point, cache):
@@ -143,20 +143,20 @@ class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
             cache[id(self)] = eval1(point, cache) / eval2(point, cache)
         return cache[id(self)]
 
-    def _forward_diff(self, direction, point):
-        high = self.expr1._forward_diff(direction, point)
-        low = self.expr2._forward_diff(direction, point)
+    def _forward_diff(self, direction, point, cache):
+        high = cache[id(self.expr1)]
+        low = cache[id(self.expr2)]
+        dhigh = self.expr1._forward_diff(direction, point, cache)
+        dlow = self.expr2._forward_diff(direction, point, cache)
 
-        # low d high - high d-low, over denominator squared we go!
-        diff = (low.value * high.diff - high.value * low.diff) / low.value ** 2
-        return ForwardDiff(value=high.value / low.value,
-                           diff=diff)
+        return (low * dhigh - high * dlow) / low ** 2
 
-    def _reverse_diff(self, point, adjoint, answer):
-        lhs = self.expr1.eval(point)
-        rhs = self.expr2.eval(point)
-        self.expr1._reverse_diff(point, adjoint / rhs, answer)
-        self.expr2._reverse_diff(point, -adjoint * lhs / rhs ** 2, answer)
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        high = cache[id(self.expr1)]
+        low = cache[id(self.expr2)]
+        self.expr1._reverse_diff(point, adjoint / low, gradient, cache)
+        self.expr2._reverse_diff(point, -adjoint * high / low ** 2, gradient,
+                                 cache)
 
 class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
     def _eval(self, point, cache):
@@ -165,29 +165,27 @@ class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
             cache[id(self)] = eval1(point, cache) ** eval2(point, cache)
         return cache[id(self)]
 
-    def _forward_diff(self, direction, point):
-        # D_x[f ** g] = D_x[exp(g ln f)] = exp(g ln f) D_x[g ln f]
-        #             = exp(g ln f) (g'ln f + gf' / f)
-        #             = f ** (g - 1) (fg' ln f + gf')
+    def _forward_diff(self, direction, point, cache):
+        base = cache[id(self.expr1)]
+        exp = cache[id(self.expr2)]
+        dbase = self.expr1._forward_diff(direction, point, cache)
+        dexp = self.expr2._forward_diff(direction, point, cache)
 
-        base = self.expr1._forward_diff(direction, point)
-        exp = self.expr2._forward_diff(direction, point)
-
-        if base.value == 0:     # avoid MathDomainError
-            diff = 0
+        if base == 0:       # avoid MathDomainError
+            return 0
         else:
-            diff = (base.value ** (exp.value - 1) *
-                    (exp.value * base.diff +
-                     base.value * exp.diff * math.log(base.value)))
+            # D_x[f ** g] = D_x[exp(g ln f)] = exp(g ln f) D_x[g ln f]
+            #             = exp(g ln f) (g'ln f + gf' / f)
+            #             = f ** (g - 1) (fg' ln f + gf')
 
-        return ForwardDiff(value=base.value ** exp.value, diff=diff)
+            return (base ** (exp - 1) *
+                    (exp * dbase + base * dexp * math.log(base)))
 
-    def _reverse_diff(self, point, adjoint, answer):
-        base = self.expr1.eval(point)
-        exp = self.expr2.eval(point)
+    def _reverse_diff(self, point, adjoint, gradient, cache):
+        base = cache[id(self.expr1)]
+        exp = cache[id(self.expr2)]
 
         self.expr1._reverse_diff(point, adjoint * exp * base ** (exp - 1),
-                                 answer)
-        self.expr2._reverse_diff(point,
-                                 adjoint * math.log(base) * base ** exp,
-                                 answer)
+                                 gradient, cache)
+        self.expr2._reverse_diff(point, adjoint * math.log(base) * base ** exp,
+                                 gradient, cache)
