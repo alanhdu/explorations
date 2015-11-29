@@ -42,8 +42,13 @@ pub mod expr {
         /// is not found.
         pub fn forward_diff(&self, direction: &HashMap<String, f64>,
                             point: &HashMap<String, f64>) -> f64 {
-            self.expr.forward_diff(direction, point)
+            self.expr.forward_diff(direction, point).diff
         }
+    }
+
+    struct ForwardDiff {
+        value: f64,
+        diff: f64,
     }
 
     /// Private type that handles the actual heavy-lifting.
@@ -66,12 +71,15 @@ pub mod expr {
                 InnerExpr::Variable(ref x) => *values.get(x).unwrap(),
             }
         }
+        /// We return both the value of the expression and the
+        /// derivative to avoid duplicating work.
         fn forward_diff(&self, direction: &HashMap<String, f64>,
-                            point: &HashMap<String, f64>) -> f64 {
+                            point: &HashMap<String, f64>) -> ForwardDiff {
             match *self {
-                InnerExpr::Constant(_) => 0.0,
+                InnerExpr::Constant(x) => ForwardDiff{value: x, diff: 0.0},
                 InnerExpr::Arithmetic(ref x) => x.forward_diff(direction, point),
-                InnerExpr::Variable(ref x) => *direction.get(x).unwrap(),
+                InnerExpr::Variable(ref x) => ForwardDiff{diff: *direction.get(x).unwrap(),
+                                                          value: *point.get(x).unwrap()}
             }
         }
     }
@@ -99,30 +107,32 @@ pub mod expr {
             }
         }
         fn forward_diff(&self, direction: &HashMap<String, f64>,
-                            point: &HashMap<String, f64>) -> f64 {
+                            point: &HashMap<String, f64>) -> ForwardDiff {
             match *self {
                 Arithmetic::Add(ref a, ref b) => {
                     let lhs = a.forward_diff(direction, point);
                     let rhs = b.forward_diff(direction, point);
-                    lhs + rhs
+                    ForwardDiff {value: lhs.value + rhs.value, diff: lhs.diff + rhs.diff}
                 },
                 Arithmetic::Sub(ref a, ref b) => {
                     let lhs = a.forward_diff(direction, point);
                     let rhs = b.forward_diff(direction, point);
-                    lhs - rhs
+                    ForwardDiff {value: lhs.value - rhs.value, diff: lhs.diff - rhs.diff}
                 },
                 Arithmetic::Mul(ref a, ref b) => {
-                    (a.eval(point) * b.forward_diff(direction, point) +
-                        b.eval(point) * a.forward_diff(direction, point))
+                    let lhs = a.forward_diff(direction, point);
+                    let rhs = b.forward_diff(direction, point);
+
+                    ForwardDiff {value: lhs.value * rhs.value,
+                                 diff: lhs.value * rhs.diff + lhs.diff * rhs.value}
                 },
                 Arithmetic::Div(ref a, ref b) => {
-                    let high= a.eval(point);
-                    let low = b.eval(point);
-                    let dhigh = a.forward_diff(direction, point);
-                    let dlow = b.forward_diff(direction, point);
+                    let high = a.forward_diff(direction, point);
+                    let low = b.forward_diff(direction, point);
 
                     // low dhigh - high dlow, over denominator squared we go
-                    (low * dhigh - high * dlow) / (low.powi(2))
+                    ForwardDiff {value: high.value / low.value,
+                                 diff: (low.value * high.diff - high.value * low.diff) / low.value.powi(2)}
                 },
                 Arithmetic::Pow(ref a, ref b) => {
                     // D_x[f ** g] = D_x[exp(g ln f)] = exp(g ln f) D_x[g ln f]
@@ -130,16 +140,17 @@ pub mod expr {
                     //             = f ** g * (gf' / f + g' ln f)
                     //             = f ** (g - 1) * (gf' + fg' ln f)
                     // Verified by WolframAlpha :)
-                    let base = a.eval(point);
-                    let exp = b.eval(point);
-                    let dbase = a.forward_diff(direction, point);
-                    let dexp = b.forward_diff(direction, point);
+                    let base = a.forward_diff(direction, point);
+                    let exp = b.forward_diff(direction, point);
 
-                    if base == 0.0 {    // avoid divide by zero error
+                    let diff = if base.value == 0.0 {    // avoid divide by zero error
                         0.0
                     } else {
-                        base.powf(exp - 1.0) * (exp * dbase + base * dexp * base.ln())
-                    }
+                        let tmp = exp.value * base.diff + base.value * exp.diff * base.value.ln();
+                        base.value.powf(exp.value - 1.0) * tmp
+                    };
+
+                    ForwardDiff {value: base.value.powf(exp.value), diff: diff}
                 }
             }
         }
