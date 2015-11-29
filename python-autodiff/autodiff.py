@@ -11,6 +11,9 @@ class Expr:
         :param point: Dict[str, float]. Maps variable names to their value
         :returns float:
         """
+        return self._eval(point, {})
+
+    def _eval(self, point: Point, cache) -> float:
         raise NotImplementedError("eval not implemented")
 
     def forward_diff(self, direction: Point, point: Point) -> float:
@@ -58,7 +61,7 @@ class Expr:
         return Pow(self, other)
 
 class Variable(Expr, namedtuple("Variable", ["name"])):
-    def eval(self, point):
+    def _eval(self, point, cache):
         return point[self.name]
 
     def _forward_diff(self, direction, point):
@@ -68,7 +71,7 @@ class Variable(Expr, namedtuple("Variable", ["name"])):
         answer[self.name] += adjoint
 
 class Constant(Expr, namedtuple("Constant", ["value"])):
-    def eval(self, point):
+    def _eval(self, point, cache):
         return self.value
 
     def _forward_diff(self, direction, point):
@@ -78,8 +81,11 @@ class Constant(Expr, namedtuple("Constant", ["value"])):
         pass
 
 class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
-    def eval(self, point):
-        return self.expr1.eval(point) + self.expr2.eval(point)
+    def _eval(self, point, cache):
+        if id(self) not in cache:
+            eval1, eval2 = self.expr1._eval, self.expr2._eval
+            cache[id(self)] = eval1(point, cache) + eval2(point, cache)
+        return cache[id(self)]
 
     def _forward_diff(self, direction, point):
         lhs = self.expr1._forward_diff(direction, point)
@@ -93,8 +99,11 @@ class Add(Expr, namedtuple("Add", ["expr1", "expr2"])):
         self.expr2._reverse_diff(point, adjoint, answer)
 
 class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
-    def eval(self, point):
-        return self.expr1.eval(point) - self.expr2.eval(point)
+    def _eval(self, point, cache):
+        if id(self) not in cache:
+            eval1, eval2 = self.expr1._eval, self.expr2._eval
+            cache[id(self)] = eval1(point, cache) - eval2(point, cache)
+        return cache[id(self)]
 
     def _forward_diff(self, direction, point):
         lhs = self.expr1._forward_diff(direction, point)
@@ -108,8 +117,11 @@ class Subtract(Expr, namedtuple("Subtract", ["expr1", "expr2"])):
         self.expr2._reverse_diff(point, -adjoint, answer)
 
 class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
-    def eval(self, point):
-        return self.expr1.eval(point) * self.expr2.eval(point)
+    def _eval(self, point, cache):
+        if id(self) not in cache:
+            eval1, eval2 = self.expr1._eval, self.expr2._eval
+            cache[id(self)] = eval1(point, cache) * eval2(point, cache)
+        return cache[id(self)]
 
     def _forward_diff(self, direction, point):
         lhs = self.expr1._forward_diff(direction, point)
@@ -125,8 +137,11 @@ class Multiply(Expr, namedtuple("Multiply", ["expr1", "expr2"])):
         self.expr2._reverse_diff(point, adjoint * lhs, answer)
 
 class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
-    def eval(self, point):
-        return self.expr1.eval(point) / self.expr2.eval(point)
+    def _eval(self, point, cache):
+        if id(self) not in cache:
+            eval1, eval2 = self.expr1._eval, self.expr2._eval
+            cache[id(self)] = eval1(point, cache) / eval2(point, cache)
+        return cache[id(self)]
 
     def _forward_diff(self, direction, point):
         high = self.expr1._forward_diff(direction, point)
@@ -144,8 +159,11 @@ class Divide(Expr, namedtuple("Divide", ["expr1", "expr2"])):
         self.expr2._reverse_diff(point, -adjoint * lhs / rhs ** 2, answer)
 
 class Pow(Expr, namedtuple("Pow", ["expr1", "expr2"])):
-    def eval(self, point):
-        return self.expr1.eval(point) ** self.expr2.eval(point)
+    def _eval(self, point, cache):
+        if id(self) not in cache:
+            eval1, eval2 = self.expr1._eval, self.expr2._eval
+            cache[id(self)] = eval1(point, cache) ** eval2(point, cache)
+        return cache[id(self)]
 
     def _forward_diff(self, direction, point):
         # D_x[f ** g] = D_x[exp(g ln f)] = exp(g ln f) D_x[g ln f]
