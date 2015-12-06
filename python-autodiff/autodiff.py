@@ -12,7 +12,12 @@ class Expr:
         """
         return self._eval(point, {})
 
-    def _eval(self, point: Point, cache) -> float:
+    def _eval(self, point: Point, cache: dict) -> float:
+        """ Fills out a cache mapping Expr objects to their evaluated value.
+
+        We can't just use functools.lru_cache here because Point (dictionaries)
+        aren't hashable.
+        """
         raise NotImplementedError
 
     def forward_diff(self, direction: Point, point: Point) -> float:
