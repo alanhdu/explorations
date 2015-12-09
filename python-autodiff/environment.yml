@@ -1,0 +1,5 @@
+name: autodiff
+dependencies:
+- flake8=2.3
+- pytest=2.8
+- python=3.5
