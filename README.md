@@ -3,6 +3,9 @@ large enough for their separate repositories.
 
 In reverse chronological order:
 
+- `college-gender-ratio` (2016-05-17) -- Some quick plots of the gender
+  ratio for different college campuses. Mostly to get my feet wet with
+  the [Bokeh plotting library](https://bokeh.pydata.org).
 - `python-autodiff` (2015-11-27) -- Forward and reverse mode automatic
   differentiation implemented in Python in Rust. See my [blog post](http://www.columbia.edu/~ahd2125/post/2015/12/5/)
 - `rust-autodiff` (2015-11-25) -- Simple automatic differentiation
