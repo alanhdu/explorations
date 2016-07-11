@@ -1,0 +1,9 @@
+name: nutrition
+dependencies:
+- python=3.5
+- notebook
+- pandas=0.18
+- statsmodels=0.6.1
+- seaborn=0.7.0
+- pip:
+  - dplython==0.0.4
