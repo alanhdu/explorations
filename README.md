@@ -24,3 +24,5 @@ In reverse chronological order:
 - `dataselect` (2014-11-19) -- an experiment to execute query strings on
   data. Motivated by frustrations with
   [Patsy](https://github.com/pydata/patsy).
+- `regex` (2014-07-20) -- An attempt to construct my own regex matcher.
+  Wasn't high-school me cute?
