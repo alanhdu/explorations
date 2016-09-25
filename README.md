@@ -1,5 +1,5 @@
-Some random mini-projects that are large enough for me to keep, but not
-large enough for their separate repositories.
+Some random mini-projects that are large enough for me to keep around,
+but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
