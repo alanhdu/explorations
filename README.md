@@ -16,6 +16,9 @@ In reverse chronological order:
   post](http://www.columbia.edu/~ahd2125/post/2015/12/5/)
 - `rust-hashmap` (2015-10-12) -- a small hashmap implemented in Rust.
 - `rust-shell` (2015-09-24) -- a small shell implemented in Rust.
+- `frequests` (2015-07-27) -- A small clone of
+  [grequests](https://github.com/kennethreitz/grequests) but using Python's
+  built-in `concurrent.futures` instead of [gevent](http://www.gevent.org/)
 - `chess` (2015-06-08) -- a Jupyter notebook for my [blog post on
   permutation tests](http://www.columbia.edu/~ahd2125/post/2015/6/8/).
 - `dataselect` (2014-11-19) -- an experiment to execute query strings on
