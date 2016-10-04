@@ -3,6 +3,8 @@ but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
+- `bson_parse` (2016-09-11) -- A BSON parser written wtih Rust and
+  [Nom](https://github.com/geal/nom).
 - `calorie-school-reproduction` (2016-07-10) -- A reproduction of a
   result I found in high school.
 - `college-gender-ratio` (2016-05-17) -- Some quick plots of the gender
