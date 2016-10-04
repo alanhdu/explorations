@@ -1,0 +1,9 @@
+[package]
+name = "bson_parse"
+version = "0.1.0"
+authors = ["Alan Du <alanhdu@gmail.com>"]
+
+[dependencies]
+bson = "^0.3.0"
+chrono = "^0.2"
+nom = "^1.2.4"
