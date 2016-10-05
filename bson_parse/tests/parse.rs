@@ -19,7 +19,7 @@ fn test_parse_empty_document() {
     if let nom::IResult::Done(b"", output) = nom_doc(&buf) {
         assert_eq!(output, doc);
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -35,7 +35,7 @@ fn test_parse_javascript_closure() {
     if let nom::IResult::Done(b"", output) = nom_doc(&buf) {
         assert_eq!(doc, output);
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -69,6 +69,6 @@ fn test_parse_complex_document() {
     if let nom::IResult::Done(b"", output) = nom_doc(&buf) {
         assert_eq!(doc, output);
     } else {
-        assert!(false);
+        unreachable!();
     }
 }

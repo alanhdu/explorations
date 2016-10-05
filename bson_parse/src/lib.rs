@@ -178,7 +178,7 @@ fn test_cstring() {
         assert_eq!(remaining, b"world!");
         assert_eq!(output, "Hello");
     } else {
-        assert!(false)
+        unreachable!()
     }
 }
 
@@ -190,14 +190,14 @@ fn test_binary() {
                                         b"12345".to_vec()));
         assert_eq!(remaining, b"67");
     } else {
-        assert!(false);
+        unreachable!();
     }
 
     // Invalid subtype
     bytes = b"\x05\0\0\0\x321234567";
     if let IResult::Error(_) = binary(bytes) {
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -208,14 +208,14 @@ fn test_string() {
         assert_eq!(output, "12345");
         assert_eq!(remaining, b"67");
     } else {
-        assert!(false);
+        unreachable!();
     }
 
     // Not terminated with null byte
     bytes = b"\x05\0\0\012345678";
     if let IResult::Error(_) = binary(bytes) {
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -229,7 +229,7 @@ fn test_element_floating_point() {
         assert_eq!(output, ("hello".to_string(), Bson::FloatingPoint(3.1415)));
         assert_eq!(remaining, b"");
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -240,7 +240,7 @@ fn test_element_string() {
         assert_eq!(output, ("string".to_string(), Bson::String("hello".to_string())));
         assert_eq!(remaining, b"");
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
 
@@ -251,6 +251,6 @@ fn test_element_int() {
         assert_eq!(output, ("12345".to_string(), Bson::I32(5)));
         assert_eq!(remaining, b"");
     } else {
-        assert!(false);
+        unreachable!();
     }
 }
