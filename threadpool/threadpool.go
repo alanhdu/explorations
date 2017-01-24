@@ -8,7 +8,8 @@ import (
 type futureState int
 
 const (
-	done = iota
+	cancelled = iota
+	done
 	running
 	waiting
 )
@@ -16,6 +17,7 @@ const (
 type Future struct {
 	state    futureState
 	function func() interface{}
+	id       int
 
 	channel chan interface{}
 }
@@ -57,6 +59,8 @@ func (t *ThreadPoolExecutor) run(id int) {
 			// channel was closed and we're done processing
 			if future == nil {
 				return
+			} else if future.state == cancelled {
+				continue
 			}
 
 			future.state = running
@@ -104,5 +108,13 @@ func (f *Future) Result(timeout time.Duration) *interface{} {
 }
 
 func (f *Future) Done() bool {
-	return f.state == done
+	return f.state == done || f.state == cancelled
+}
+
+func (f *Future) Cancel() bool {
+	if f.state == running {
+		return false
+	}
+	f.state = cancelled
+	return true
 }

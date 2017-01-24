@@ -19,14 +19,16 @@ func TestBasicSubmit(t *testing.T) {
 	pool := NewThreadPoolExecutor(1)
 	defer pool.Shutdown(false)
 
+	c := make(chan bool)
 	f := pool.Submit(func() interface{} {
-		time.Sleep(time.Millisecond * 200)
+		c <- true
 		return 5
 	})
 
 	assert.False(t, f.Done())
+	<-c
 
-	r := f.Result(time.Second)
+	r := f.Result(50 * time.Millisecond)
 	assert.Equal(t, 5, (*r).(int))
 	assert.True(t, f.Done())
 }
@@ -112,4 +114,28 @@ func TestFutureDone(t *testing.T) {
 
 	time.Sleep(time.Millisecond)
 	assert.True(t, f.Done())
+}
+
+func TestFutureCancel(t *testing.T) {
+	pool := NewThreadPoolExecutor(1)
+	defer pool.Shutdown(false)
+
+	c := make(chan bool)
+
+	f1 := pool.Submit(func() interface{} {
+		c <- false
+		c <- true
+		return 1
+	})
+
+	<-c // Wait for f1 to run
+	assert.False(t, f1.Cancel())
+
+	f2 := pool.Submit(func() interface{} {
+		return 2
+	})
+
+	assert.True(t, f2.Cancel())
+
+	<-c // allow f1 to finish
 }
