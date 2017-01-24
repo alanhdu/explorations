@@ -18,6 +18,7 @@ type Future struct {
 	state    futureState
 	function func() interface{}
 	id       int
+	lock     sync.Mutex
 
 	channel chan interface{}
 }
@@ -59,8 +60,13 @@ func (t *ThreadPoolExecutor) run(id int) {
 			// channel was closed and we're done processing
 			if future == nil {
 				return
-			} else if future.state == cancelled {
-				continue
+			} else {
+				future.lock.Lock()
+				if future.state == cancelled {
+					future.lock.Unlock()
+					continue
+				}
+				future.lock.Unlock()
 			}
 
 			future.state = running
@@ -112,6 +118,9 @@ func (f *Future) Done() bool {
 }
 
 func (f *Future) Cancel() bool {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
 	if f.state == running {
 		return false
 	}
