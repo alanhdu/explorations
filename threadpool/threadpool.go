@@ -2,10 +2,9 @@ package threadpool
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
-
-type futureState int
 
 const (
 	cancelled = iota
@@ -15,10 +14,9 @@ const (
 )
 
 type Future struct {
-	state    futureState
+	state    int32
 	function func() interface{}
 	id       int
-	lock     sync.Mutex
 
 	channel chan interface{}
 }
@@ -60,16 +58,12 @@ func (t *ThreadPoolExecutor) run(id int) {
 			// channel was closed and we're done processing
 			if future == nil {
 				return
-			} else {
-				future.lock.Lock()
-				if future.state == cancelled {
-					future.lock.Unlock()
-					continue
-				}
-				future.lock.Unlock()
 			}
 
-			future.state = running
+			if !atomic.CompareAndSwapInt32(&future.state, waiting, running) {
+				continue
+			}
+
 			result := future.function()
 			future.state = done
 
@@ -118,12 +112,12 @@ func (f *Future) Done() bool {
 }
 
 func (f *Future) Cancel() bool {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-
-	if f.state == running {
-		return false
+	/* Equivalent to:
+	if f.state == waiting {
+		f.state = cancelled
+		return true
 	}
-	f.state = cancelled
-	return true
+	return false
+	*/
+	return atomic.CompareAndSwapInt32(&f.state, waiting, cancelled)
 }
