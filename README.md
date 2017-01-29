@@ -8,7 +8,7 @@ In reverse chronological order:
 - `calorie-school-reproduction` (2016-07-10) -- A reproduction of a
   result I found in high school.
 - `college-gender-ratio` (2016-05-17) -- Some quick plots of the gender
-  ratio for different college campuses. Mostly to get my feet wet with
+  ratio for different college majors. Mostly to get my feet wet with
   the [Bokeh plotting library](https://bokeh.pydata.org).
 - `python-autodiff` (2015-11-27) -- Forward and reverse mode automatic
   differentiation implemented in Python in Rust. See my [blog
