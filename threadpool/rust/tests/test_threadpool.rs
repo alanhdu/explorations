@@ -1,8 +1,14 @@
+#![feature(conservative_impl_trait)]
+
+extern crate futures;
 extern crate threadpool;
 
 use std::thread;
 use std::time;
 use std::sync;
+
+use futures::Future;
+use futures::sync::oneshot;
 
 use threadpool::*;
 
@@ -11,7 +17,7 @@ fn test_basic_submit() {
     let pool = ThreadPoolExecutor::new(1);
     let future = pool.submit(|| 1);
 
-    assert_eq!(1, future.result());
+    assert_eq!(Ok(1), future.wait());
 }
 
 #[test]
@@ -24,7 +30,7 @@ fn test_big_submit() {
     }
 
     for (i, future) in futures.into_iter().enumerate() {
-        assert_eq!(i, future.result());
+        assert_eq!(Ok(i), future.wait());
     }
 }
 
@@ -34,8 +40,8 @@ fn test_shutdown() {
 
     thread::spawn(move || {
         {
-            let pool = ThreadPoolExecutor::new(8);
-            for _ in 0..10000 {
+            let pool = ThreadPoolExecutor::new(1);
+            for _ in 0..10 {
                 pool.submit(move || {
                     thread::sleep(time::Duration::from_millis(50));
                 });
@@ -46,4 +52,14 @@ fn test_shutdown() {
     });
 
     recv.recv_timeout(time::Duration::from_millis(100)).unwrap();
+}
+
+#[test]
+fn test_cancel() {
+    let pool = ThreadPoolExecutor::new(0);
+    let mut future = pool.submit(move || 1);
+    pool.shutdown();
+
+    assert_eq!(Err(oneshot::Canceled), future.poll());
+    assert_eq!(Err(oneshot::Canceled), future.wait());
 }

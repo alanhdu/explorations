@@ -11,8 +11,8 @@ use std::sync::Arc;
 use std::boxed::FnBox;
 
 use crossbeam::sync::MsQueue;
+use futures::{Future, Poll};
 use futures::sync::oneshot;
-use futures::Future as _Future;
 
 pub struct ThreadPoolExecutor {
     channel: Arc<MsQueue<Message>>,
@@ -22,12 +22,6 @@ pub struct ThreadPoolExecutor {
 enum Message {
     Run(Box<FnBox() -> () + Send>),
     Cancel,
-}
-
-pub trait Future {
-    type Item;
-
-    fn result(self) -> Self::Item;
 }
 
 struct InnerFuture<T> {
@@ -55,16 +49,14 @@ impl ThreadPoolExecutor {
         pool
     }
 
-    pub fn submit<T, F>(&self, func: F) -> impl Future<Item=T>
+    pub fn submit<T, F>(&self, func: F) -> impl Future<Item=T, Error=oneshot::Canceled>
         where F: FnOnce() -> T + Send + 'static,
-              T: Send + 'static
+              T: Send + 'static,
     {
-        let (send, recv) = oneshot::channel::<T>();
+        let (send, recv) = oneshot::channel();
 
-        let closure = Box::new(move || {
-            send.complete(func());
-        });
-        self.channel.push(Message::Run(closure));
+        let success = Box::new(move || send.complete(func()));
+        self.channel.push(Message::Run(success));
 
         InnerFuture {recv: recv}
     }
@@ -91,9 +83,14 @@ impl Drop for ThreadPoolExecutor {
 
 impl<T> Future for InnerFuture<T> {
     type Item = T;
+    type Error = oneshot::Canceled;
 
-    fn result(self) -> T {
-        self.recv.wait().unwrap()
+    fn poll(&mut self) -> Poll<T, Self::Error> {
+        self.recv.poll()
+    }
+
+    fn wait(self) -> Result<T, Self::Error> {
+        self.recv.wait()
     }
 }
 
