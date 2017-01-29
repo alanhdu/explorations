@@ -1,0 +1,8 @@
+[package]
+name = "threadpool"
+version = "0.1.0"
+authors = ["Alan Du <alanhdu@gmail.com>"]
+
+[dependencies]
+crossbeam = "0.2"
+futures = "0.1"
