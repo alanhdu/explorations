@@ -12,9 +12,11 @@ class State(enum.Enum):
 
 
 class Future(object):
-    def __init__(self):
+    def __init__(self, lock):
         self.state = State.WAITING
         self.event = threading.Event()
+
+        self.lock = lock
 
         self._result = None
         self._exception = None
@@ -31,10 +33,11 @@ class Future(object):
         raise RuntimeError("Time Out")
 
     def cancel(self) -> bool:
-        if self.state == State.WAITING:
-            self.state = State.CANCELLED
-            return True
-        return False
+        with self.lock:
+            if self.state == State.WAITING:
+                self.state = State.CANCELLED
+                return True
+            return False
 
 
 class ThreadPoolExecutor(object):
@@ -57,8 +60,6 @@ class ThreadPoolExecutor(object):
 
                 assert future.state in {State.CANCELLED, State.WAITING}
                 if future.state == State.WAITING:
-                    # Technically there's a race here with Future.cancel
-                    # But whatever.
                     future.state = State.RUNNING
                     return future, func, args, kwargs
 
@@ -82,7 +83,7 @@ class ThreadPoolExecutor(object):
                 future.event.set()
 
     def submit(self, func, *args, **kwargs) -> Future:
-        f = Future()
+        f = Future(self.available)
 
         with self.available:
             self.work.append((f, func, args, kwargs))
