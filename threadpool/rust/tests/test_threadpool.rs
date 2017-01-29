@@ -1,5 +1,9 @@
 extern crate threadpool;
 
+use std::thread;
+use std::time;
+use std::sync;
+
 use threadpool::*;
 
 #[test]
@@ -22,4 +26,24 @@ fn test_big_submit() {
     for (i, future) in futures.into_iter().enumerate() {
         assert_eq!(i, future.result());
     }
+}
+
+#[test]
+fn test_shutdown() {
+    let (send, recv) = sync::mpsc::channel();
+
+    thread::spawn(move || {
+        {
+            let pool = ThreadPoolExecutor::new(8);
+            for _ in 0..10000 {
+                pool.submit(move || {
+                    thread::sleep(time::Duration::from_millis(50));
+                });
+            }
+            pool.shutdown();
+        }
+        send.send(()).unwrap();
+    });
+
+    recv.recv_timeout(time::Duration::from_millis(100)).unwrap();
 }

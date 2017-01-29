@@ -1,7 +1,7 @@
 #![feature(fnbox)]
 // Ugh... See https://github.com/rust-lang/rust/issues/28796
 #![feature(conservative_impl_trait)]
-// Well, if we have to use nightly, might as well...
+// Well, if we have to use nightly, might as well go the whole hog.
 
 extern crate crossbeam;
 extern crate futures;
@@ -70,7 +70,9 @@ impl ThreadPoolExecutor {
     }
 
     pub fn shutdown(self) {
-        unimplemented!()
+        // drain message queue
+        while let Some(_) = self.channel.try_pop() {
+        }
     }
 }
 
