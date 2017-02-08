@@ -3,6 +3,8 @@ but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
+- `threadpool` (2017-01-29) -- A `ThreadPoolExecutor` and futures
+  implementation based off of Python's `concurrent.futures` module.
 - `bson_parse` (2016-09-11) -- A BSON parser written wtih Rust and
   [Nom](https://github.com/geal/nom).
 - `calorie-school-reproduction` (2016-07-10) -- A reproduction of a
