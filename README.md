@@ -3,6 +3,10 @@ but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
+- `scheme` (2019-01-30) -- A small Scheme (based off of
+  https://scheme.cs61a.org/) that I live-coded for an "Intro to LISP"
+  workshop. It's not bad for 15 minutes of live-coding, but it's quite
+  incomplete.
 - `threadpool` (2017-01-29) -- A `ThreadPoolExecutor` and futures
   implementation based off of Python's `concurrent.futures` module.
 - `bson_parse` (2016-09-11) -- A BSON parser written wtih Rust and
