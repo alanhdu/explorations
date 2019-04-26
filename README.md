@@ -3,7 +3,7 @@ but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
-- `vbp` (2019-04-26) -- Vertical Bit-Parallelism Rank, based off of
+- `vbp` (2019-04-25) -- Vertical Bit-Parallelism Rank, based off of
   "BitWeaving: Fast Scans for Main Memory Data Processing"
 - `scheme` (2019-01-30) -- A small Scheme (based off of
   https://scheme.cs61a.org/) that I live-coded for an "Intro to LISP"
