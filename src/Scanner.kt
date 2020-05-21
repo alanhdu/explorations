@@ -1,4 +1,4 @@
-package org.craftinginterpreters.lox
+import error
 
 val keywords = mapOf(
     "and" to TokenType.AND,
