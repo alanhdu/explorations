@@ -79,12 +79,16 @@ class Scanner(private val source: String) {
                     TokenType.GREATER
                 }
             )
-            '/' -> if (this.match('/')) {
-                while (peek() != '\n' && !this.isAtEnd()) {
-                    this.advance()
+            '/' -> {
+                if (this.match('/')) {
+                    while (peek() != '\n' && !this.isAtEnd()) {
+                        this.advance()
+                    }
+                } else if (this.match('*')) {
+                    this.blockComment()
+                } else {
+                    this.addToken(TokenType.SLASH)
                 }
-            } else {
-                this.addToken(TokenType.SLASH)
             }
             ' ', '\r', '\t' -> {
             }
@@ -170,5 +174,30 @@ class Scanner(private val source: String) {
         val text = this.source.substring(this.start, this.current)
         val type = keywords.getOrDefault(text, TokenType.IDENTIFIER)
         this.addToken(type)
+    }
+
+    private fun blockComment() {
+        var level = 1
+
+        while (level != 0) {
+            when (this.peek()) {
+                '/' -> if (this.peekNext() == '*') {
+                    this.advance()
+                    this.advance()
+                    level += 1
+                }
+                '*' -> if (this.peekNext() == '/') {
+                    level -= 1
+                    this.advance()
+                    this.advance()
+                }
+                '\n' -> this.line++
+                else -> this.advance()
+            }
+            if (this.isAtEnd() && level != 0) {
+                error(this.line, "Unbalanced /* ... */ block comment")
+                return
+            }
+        }
     }
 }
