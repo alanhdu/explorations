@@ -1,7 +1,8 @@
 class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
 
-    private var current = 0
+    private var breakables = 0 // # of for/while loops we can break out of
+    private var current = 0    // which token we are parsing
 
     fun parse(): List<Stmt> {
         val statements = ArrayList<Stmt>()
@@ -87,13 +88,20 @@ class Parser(private val tokens: List<Token>) {
             this.match(TokenType.IF) -> this.ifStatement()
             this.match(TokenType.WHILE) -> this.whileStatement()
             this.match(TokenType.FOR) -> this.forStatement()
+            this.match(TokenType.BREAK) -> {
+                if (this.breakables > 0) {
+                    this.consume(TokenType.SEMICOLON, "Expected ; after break")
+                    Stmt.Break()
+                } else {
+                    throw this.error(this.previous(), "break found in bad context")
+                }
+            }
             else -> this.expressionStatement()
         }
     }
 
     private fun block(): List<Stmt> {
         val statements = ArrayList<Stmt>()
-
 
         while (!this.check(TokenType.RIGHT_BRACE) && this.peek().type != TokenType.EOF) {
             val decl = this.declaration()
@@ -129,7 +137,10 @@ class Parser(private val tokens: List<Token>) {
         val cond = this.expression()
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after while condition")
 
-        return Stmt.While(cond, this.statement())
+        this.breakables++
+        val stmt = this.statement()
+        this.breakables--
+        return Stmt.While(cond, stmt)
     }
 
     private fun forStatement(): Stmt {
@@ -153,7 +164,9 @@ class Parser(private val tokens: List<Token>) {
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after for clauses")
 
         // Desugar into a while loop
+        this.breakables++
         var body = this.statement()
+        this.breakables--
         if (increment != null) {
             body = Stmt.Block(listOf(body, increment))
         }

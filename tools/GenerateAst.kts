@@ -69,6 +69,7 @@ defineAst(
 )
 defineAst(
     outputDir, "Stmt", mapOf(
+        "Break" to mapOf(),
         "Block" to mapOf("statements" to "List<Stmt>"),
         "Expression" to mapOf("expr" to "Expr"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),

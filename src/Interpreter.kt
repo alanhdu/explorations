@@ -1,5 +1,8 @@
 val NUM_ERR_MSG = "Operands must be two numbers"
 
+class RuntimeError(val token: Token, message: String) : RuntimeException(message)
+class Break : RuntimeException()
+
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     private var env = Environment()
 
@@ -176,8 +179,15 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitWhileStmt(stmt: Stmt.While) {
-        while (this.isTruthy(this.evaluate(stmt.condition))) {
-            this.execute(stmt.body)
+        try {
+            while (this.isTruthy(this.evaluate(stmt.condition))) {
+                this.execute(stmt.body)
+            }
+        } catch (error: Break) {
         }
+    }
+
+    override fun visitBreakStmt(stmt: Stmt.Break) {
+        throw Break()
     }
 }

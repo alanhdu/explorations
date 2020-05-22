@@ -1,5 +1,6 @@
 abstract class Stmt {
     interface Visitor<R> {
+        fun visitBreakStmt(stmt: Break): R
         fun visitBlockStmt(stmt: Block): R
         fun visitExpressionStmt(stmt: Expression): R
         fun visitIfStmt(stmt: If): R
@@ -9,6 +10,12 @@ abstract class Stmt {
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R
+    class Break : Stmt() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitBreakStmt(this)
+        }
+    }
+
     class Block(val statements: List<Stmt>) : Stmt() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitBlockStmt(this)

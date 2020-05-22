@@ -6,4 +6,7 @@ while (a < 10000) {
   var temp = a;
   a = b;
   b = temp + b;
+  if (a > 2000) break;
 }
+
+print("HELLO");
