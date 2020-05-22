@@ -1,5 +1,3 @@
-import error
-
 val keywords = mapOf(
     "and" to TokenType.AND,
     "class" to TokenType.CLASS,
@@ -80,14 +78,14 @@ class Scanner(private val source: String) {
                 }
             )
             '/' -> {
-                if (this.match('/')) {
-                    while (peek() != '\n' && !this.isAtEnd()) {
-                        this.advance()
+                when {
+                    this.match('/') -> {
+                        while (peek() != '\n' && !this.isAtEnd()) {
+                            this.advance()
+                        }
                     }
-                } else if (this.match('*')) {
-                    this.blockComment()
-                } else {
-                    this.addToken(TokenType.SLASH)
+                    this.match('*') -> this.blockComment()
+                    else -> this.addToken(TokenType.SLASH)
                 }
             }
             ' ', '\r', '\t' -> {
@@ -97,7 +95,7 @@ class Scanner(private val source: String) {
             in '0'..'9' -> this.number()
             in 'a'..'z', in 'A'..'Z', '_' -> this.identifier()
             else -> {
-                error(this.line, "Unexpected character $c")
+                Lox.error(this.line, "Unexpected character $c")
             }
         }
     }
@@ -142,7 +140,7 @@ class Scanner(private val source: String) {
 
         // Unterminated string
         if (this.isAtEnd()) {
-            error(line, "Unterminated string")
+            Lox.error(line, "Unterminated string")
             return
         }
 
@@ -161,7 +159,6 @@ class Scanner(private val source: String) {
             this.advance() // consume the .
             while (this.peek().isDigit()) this.advance()
         }
-
         val value = this.source.substring(this.start, this.current).toDouble()
         this.addToken(TokenType.NUMBER, value)
     }
@@ -195,7 +192,7 @@ class Scanner(private val source: String) {
                 else -> this.advance()
             }
             if (this.isAtEnd() && level != 0) {
-                error(this.line, "Unbalanced /* ... */ block comment")
+                Lox.error(this.line, "Unbalanced /* ... */ block comment")
                 return
             }
         }

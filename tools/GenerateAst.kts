@@ -39,13 +39,15 @@ fun defineType(
     val fields = types
         .map { "val ${it.key}: ${it.value}" }
         .joinToString(", ")
-    writer.print("""
+    writer.print(
+        """
         class $className($fields) : $baseName() {
             override fun <R> accept(visitor: Visitor<R>): R {
                 return visitor.visit$className$baseName(this)
             }
         }
-    """.trimIndent())
+    """.trimIndent()
+    )
 }
 
 // main
