@@ -179,17 +179,23 @@ class Scanner(private val source: String) {
 
         while (level != 0) {
             when (this.peek()) {
-                '/' -> if (this.peekNext() == '*') {
+                '/' -> {
                     this.advance()
-                    this.advance()
-                    level += 1
+                    if (this.peek() == '*') {
+                        this.advance()
+                        level += 1
+                    }
                 }
-                '*' -> if (this.peekNext() == '/') {
-                    level -= 1
+                '*' -> {
                     this.advance()
-                    this.advance()
+                    if (this.peek() == '/') {
+                        this.advance()
+                        level -= 1
+                    }
                 }
-                '\n' -> this.line++
+                '\n' -> {
+                    this.advance(); this.line++
+                }
                 else -> this.advance()
             }
             if (this.isAtEnd() && level != 0) {
