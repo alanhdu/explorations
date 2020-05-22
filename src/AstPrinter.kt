@@ -17,7 +17,11 @@ class AstPrinter : Expr.Visitor<String> {
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal): String {
-        return expr.value.toString()
+        return when (expr.value) {
+            null -> "nil"
+            is String -> "\"${expr.value}\""
+            else -> expr.toString()
+        }
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary): String {

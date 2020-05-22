@@ -8,14 +8,15 @@ import kotlin.system.exitProcess
 
 object Lox {
     private var hadError = false
+    private var hadRuntimeError = false
+    private val interpreter = Interpreter()
 
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
         val s = String(bytes, Charset.defaultCharset())
-        exec(s)
-        if (hadError) {
-            exitProcess(65)
-        }
+        run(s)
+        if (hadError) exitProcess(65)
+        if (hadRuntimeError) exitProcess(70)
     }
 
     fun runPrompt() {
@@ -24,23 +25,23 @@ object Lox {
 
         while (true) {
             print("> ")
-            exec(reader.readLine())
+            run(reader.readLine())
             hadError = false
         }
     }
 
-    private fun exec(source: String) {
+    private fun run(source: String) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
 
-        println(tokens)
         val parser = Parser(tokens)
         val expr = parser.parse()
-        if (hadError) return
+        if (expr == null) {
+            hadError = true
+            return
+        } else if (hadError) return
 
-        if (expr != null) {
-            println(AstPrinter().print(expr))
-        }
+        interpreter.interpret(expr)
     }
 
     fun error(line: Int, message: String) {
@@ -58,6 +59,16 @@ object Lox {
 
     private fun report(line: Int, where: String, message: String) {
         System.err.println("[line = $line ] Error$where: $message")
+    }
+
+    fun runtimeError(error: RuntimeError) {
+        System.err.println(
+            """
+            ${error.message}
+            [line ${error.token.line}]
+        """.trimIndent()
+        )
+        hadRuntimeError = true
     }
 }
 

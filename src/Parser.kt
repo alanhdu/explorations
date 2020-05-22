@@ -62,7 +62,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun equality(): Expr {
         var expr = this.comparison()
-        while (this.match(TokenType.BANG_EQUAL, TokenType.EQUAL)) {
+        while (this.match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)) {
             val operator = this.previous()
             val right = this.comparison()
             expr = Expr.Binary(expr, operator, right)
