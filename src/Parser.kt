@@ -154,7 +154,7 @@ class Parser(private val tokens: List<Token>) {
 
         val increment = when {
             this.check(TokenType.RIGHT_PAREN) -> null
-            else -> this.expressionStatement()
+            else -> this.expression()
         }
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after for clauses")
 
@@ -163,12 +163,13 @@ class Parser(private val tokens: List<Token>) {
         var body = this.statement()
         this.breakables--
         if (increment != null) {
-            body = Stmt.Block(listOf(body, increment))
+            body = Stmt.Block(listOf(body, Stmt.Expression(increment)))
         }
         body = Stmt.While(condition, body)
         if (initializer != null) {
             body = Stmt.Block(listOf(initializer, body))
         }
+
         return body
     }
 
