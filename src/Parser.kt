@@ -3,12 +3,13 @@ class Parser(private val tokens: List<Token>) {
 
     private var current = 0
 
-    fun parse(): Expr? {
-        return try {
-            this.expression()
-        } catch (error: ParseError) {
-            null
+    fun parse(): List<Stmt> {
+        val statements = ArrayList<Stmt>()
+        while (this.peek().type != TokenType.EOF) {
+            val decl = this.declaration()
+            if (decl != null) statements.add(decl)
         }
+        return statements
     }
 
     private fun match(vararg types: TokenType): Boolean {
@@ -35,10 +36,10 @@ class Parser(private val tokens: List<Token>) {
         return this.tokens[this.current - 1]
     }
 
-    private fun consume(type: TokenType, message: String) {
+    private fun consume(type: TokenType, message: String): Token {
         if (this.check(type)) {
             this.advance()
-            return
+            return this.previous()
         }
         throw this.error(this.peek(), message)
     }
@@ -56,8 +57,82 @@ class Parser(private val tokens: List<Token>) {
         }
     }
 
+    private fun declaration(): Stmt? {
+        return try {
+            if (this.match(TokenType.VAR)) this.varDeclaration()
+            else this.statement()
+        } catch (error: ParseError) {
+            this.synchronize()
+            null
+        }
+    }
+
+    private fun varDeclaration(): Stmt {
+        val name = this.consume(TokenType.IDENTIFIER, "Expect variable name")
+
+        val initializer = if (this.match(TokenType.EQUAL)) {
+            this.expression()
+        } else {
+            null
+        }
+
+        this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
+        return Stmt.Var(name, initializer)
+    }
+
+    private fun statement(): Stmt {
+        return when {
+            this.match(TokenType.PRINT) -> this.printStatement()
+            this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
+            else -> this.expressionStatement()
+        }
+    }
+
+    private fun block(): List<Stmt> {
+        val statements = ArrayList<Stmt>()
+
+
+        while (!this.check(TokenType.RIGHT_BRACE) && this.peek().type != TokenType.EOF) {
+            val decl = this.declaration()
+            if (decl != null) {
+                statements.add(decl)
+            }
+        }
+        this.consume(TokenType.RIGHT_BRACE, "Expect } after block")
+        return statements
+    }
+
+    private fun printStatement(): Stmt {
+        val value = this.expression()
+        this.consume(TokenType.SEMICOLON, "Expect ';' after value")
+        return Stmt.Print(value)
+    }
+
+    private fun expressionStatement(): Stmt {
+        val expr = this.expression()
+        this.consume(TokenType.SEMICOLON, "Expect ';' after expression")
+        return Stmt.Expression(expr)
+    }
+
     private fun expression(): Expr {
-        return this.equality()
+        return this.assignment()
+    }
+
+    private fun assignment(): Expr {
+        val expr = this.equality()
+
+        if (this.match(TokenType.EQUAL)) { // Assignment
+            val equals = this.previous()
+            val value = this.assignment()
+
+            if (expr is Expr.Variable) {
+                // rvalue to lvalue
+                return Expr.Assign(expr.name, value)
+            } else {
+                this.error(equals, "Invalid assignment target")
+            }
+        }
+        return expr
     }
 
     private fun equality(): Expr {
@@ -128,7 +203,8 @@ class Parser(private val tokens: List<Token>) {
                 this.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression")
                 Expr.Grouping(expr)
             }
-            else -> throw this.error(this.peek(), "Expect expression")
+            this.match(TokenType.IDENTIFIER) -> Expr.Variable(this.previous())
+            else -> throw this.error(this.peek(), "Expect expression, got ${this.peek()}")
         }
     }
 

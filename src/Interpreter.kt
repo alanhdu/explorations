@@ -1,15 +1,50 @@
 val NUM_ERR_MSG = "Operands must be two numbers"
 
-class Interpreter : Expr.Visitor<Any?> {
-    fun interpret(expr: Expr) {
+class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+    private var env = Environment()
+
+    fun interpret(stmts: List<Stmt>) {
         try {
-            val value = this.evaluate(expr)
-            println(this.stringify(value))
+            for (stmt in stmts) {
+                this.execute(stmt)
+            }
         } catch (error: RuntimeError) {
             Lox.runtimeError(error)
         }
     }
 
+    private fun evaluate(expr: Expr): Any? {
+        return expr.accept(this)
+    }
+
+    private fun execute(stmt: Stmt) {
+        stmt.accept(this)
+    }
+
+    private fun isTruthy(expr: Any?): Boolean {
+        return when (expr) {
+            is Boolean -> expr
+            null -> false
+            else -> true
+        }
+    }
+
+    private fun stringify(expr: Any?): String {
+        return when (expr) {
+            null -> "nil"
+            is Double -> {
+                var text = expr.toString()
+                if (text.endsWith(".0")) {
+                    text = text.substring(0, text.length - 2)
+                }
+                text
+            }
+            else -> expr.toString()
+        }
+    }
+
+
+    // Expr.Visitor Implementation
     override fun visitBinaryExpr(expr: Expr.Binary): Any? {
         val left = this.evaluate(expr.left)
         val right = this.evaluate(expr.right)
@@ -78,29 +113,46 @@ class Interpreter : Expr.Visitor<Any?> {
         }
     }
 
-    private fun evaluate(expr: Expr): Any? {
-        return expr.accept(this)
+    override fun visitVariableExpr(expr: Expr.Variable): Any? {
+        return this.env.get(expr.name)
     }
 
-    private fun isTruthy(expr: Any?): Boolean {
-        return when (expr) {
-            is Boolean -> expr
-            null -> false
-            else -> true
-        }
+    override fun visitAssignExpr(expr: Expr.Assign): Any? {
+        val value = this.evaluate(expr.value)
+        this.env.assign(expr.name, value)
+        return value
     }
 
-    private fun stringify(expr: Any?): String {
-        return when (expr) {
-            null -> "nil"
-            is Double -> {
-                var text = expr.toString()
-                if (text.endsWith(".0")) {
-                    text = text.substring(0, text.length - 2)
-                }
-                text
+    override fun visitBlockStmt(stmt: Stmt.Block) {
+        this.executeBlock(stmt.statements, Environment(this.env))
+    }
+
+    private fun executeBlock(stmts: List<Stmt>, env: Environment) {
+        val prev = this.env
+        try {
+            this.env = env
+            for (stmt in stmts) {
+                this.execute(stmt)
             }
-            else -> expr.toString()
+        } finally {
+            this.env = prev
         }
+    }
+
+
+    override fun visitExpressionStmt(stmt: Stmt.Expression) {
+        this.evaluate(stmt.expr)
+    }
+
+    override fun visitPrintStmt(stmt: Stmt.Print) {
+        val value = this.evaluate(stmt.expr)
+        println(this.stringify(value))
+    }
+
+    override fun visitVarStmt(stmt: Stmt.Var) {
+        val value = if (stmt.initializer != null) {
+            this.evaluate(stmt.initializer)
+        } else null
+        this.env.define(stmt.name.lexeme, value)
     }
 }

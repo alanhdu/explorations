@@ -58,9 +58,17 @@ if (args.size != 1) {
 val outputDir = args[0]
 defineAst(
     outputDir, "Expr", mapOf(
+        "Assign" to mapOf("name" to "Token", "value" to "Expr"),
         "Binary" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Grouping" to mapOf("expression" to "Expr"),
-        "Literal" to mapOf("value" to "Any"),
-        "Unary" to mapOf("operator" to "Token", "right" to "Expr")
+        "Literal" to mapOf("value" to "Any?"),
+        "Unary" to mapOf("operator" to "Token", "right" to "Expr"),
+        "Variable" to mapOf("name" to "Token")
     )
 )
+defineAst(outputDir, "Stmt", mapOf(
+    "Block" to mapOf("statements" to "List<Stmt>"),
+    "Expression" to mapOf("expr" to "Expr"),
+    "Print" to mapOf("expr" to "Expr"),
+    "Var" to mapOf("name" to "Token", "initializer" to "Expr?")
+))
