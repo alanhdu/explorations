@@ -2,6 +2,7 @@ val NUM_ERR_MSG = "Operands must be two numbers"
 
 class RuntimeError(val token: Token, message: String) : RuntimeException(message)
 class Break : RuntimeException()
+class Return(val value: Any?) : RuntimeException()
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     var globals = Environment()
@@ -228,5 +229,14 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     override fun visitFunctionStmt(stmt: Stmt.Function) {
         val func = LoxFunction(stmt)
         this.current_env.define(stmt.name.lexeme, func)
+    }
+
+    override fun visitReturnStmt(stmt: Stmt.Return) {
+        val value = if (stmt.value == null) {
+            null
+        } else {
+            this.evaluate(stmt.value)
+        }
+        throw Return(value)
     }
 }

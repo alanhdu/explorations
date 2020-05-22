@@ -9,7 +9,11 @@ class LoxFunction(private var declaration: Stmt.Function) : LoxCallable {
         for ((param, arg) in this.declaration.params.zip(args)) {
             env.define(param.lexeme, arg)
         }
-        interpreter.executeBlock(this.declaration.body, env)
+        try {
+            interpreter.executeBlock(this.declaration.body, env)
+        } catch (returnValue: Return) {
+            return returnValue.value
+        }
         return null
     }
 

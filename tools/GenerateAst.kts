@@ -76,6 +76,7 @@ defineAst(
         "Function" to mapOf("name" to "Token", "params" to "List<Token>", "body" to "List<Stmt>"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),
         "Print" to mapOf("expr" to "Expr"),
+        "Return" to mapOf("keyword" to "Token", "value" to "Expr?"),
         "Var" to mapOf("name" to "Token", "initializer" to "Expr?"),
         "While" to mapOf("condition" to "Expr", "body" to "Stmt")
     )

@@ -89,6 +89,7 @@ class Parser(private val tokens: List<Token>) {
             this.match(TokenType.IF) -> this.ifStatement()
             this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
             this.match(TokenType.PRINT) -> this.printStatement()
+            this.match(TokenType.RETURN) -> this.returnStatement()
             this.match(TokenType.WHILE) -> this.whileStatement()
             else -> this.expressionStatement()
         }
@@ -200,7 +201,19 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Function(name, params, body)
     }
 
-    private fun expressionStatement(): Stmt {
+    private fun returnStatement(): Stmt.Return {
+        val keyword = this.previous()
+        val value = if (this.check(TokenType.SEMICOLON)) {
+            null
+        } else {
+            this.expression()
+        }
+
+        this.consume(TokenType.SEMICOLON, "Expected ; after return value")
+        return Stmt.Return(keyword, value)
+    }
+
+    private fun expressionStatement(): Stmt.Expression {
         val expr = this.expression()
         this.consume(TokenType.SEMICOLON, "Expect ';' after expression")
         return Stmt.Expression(expr)
