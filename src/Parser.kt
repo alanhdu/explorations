@@ -64,6 +64,7 @@ class Parser(private val tokens: List<Token>) {
             if (this.match(TokenType.VAR)) this.varDeclaration()
             else this.statement()
         } catch (error: ParseError) {
+            Lox.hadError = true
             this.synchronize()
             null
         }
