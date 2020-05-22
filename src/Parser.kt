@@ -276,7 +276,35 @@ class Parser(private val tokens: List<Token>) {
             val right = this.unary()
             return Expr.Unary(operator, right)
         }
-        return this.primary()
+        return this.call()
+    }
+
+    private fun call(): Expr {
+        var expr = this.primary()
+
+        while (true) {
+            if (this.match(TokenType.LEFT_PAREN)) {
+                expr = this.finishCall(expr)
+            } else {
+                break
+            }
+        }
+        return expr
+    }
+
+    private fun finishCall(callee: Expr): Expr {
+        val args = ArrayList<Expr>()
+        if (!this.check(TokenType.RIGHT_PAREN)) {
+            do {
+                args.add(this.expression())
+            } while (this.match(TokenType.COMMA))
+        }
+        if (args.size >= 255) {
+            this.error(this.peek(), "Cannot have more than 255 arguments (got ${args.size})")
+        }
+
+        val paren = this.consume(TokenType.RIGHT_PAREN, "Expected ) after arguments")
+        return Expr.Call(callee, paren, args)
     }
 
     private fun primary(): Expr {

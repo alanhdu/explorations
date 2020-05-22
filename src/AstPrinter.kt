@@ -39,4 +39,9 @@ class AstPrinter : Expr.Visitor<String> {
     override fun visitLogicalExpr(expr: Expr.Logical): String {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right)
     }
+
+    override fun visitCallExpr(expr: Expr.Call): String {
+        return parenthesize("call", expr.callee, *expr.args.toTypedArray())
+
+    }
 }

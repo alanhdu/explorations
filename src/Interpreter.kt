@@ -136,6 +136,23 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitCallExpr(expr: Expr.Call): Any? {
+        val callee = this.evaluate(expr.callee)
+        val args = expr.args.map { this.evaluate(it) }
+
+        if (callee is LoxCallable) {
+            if (args.size != callee.arity()) {
+                throw RuntimeError(
+                    expr.paren,
+                    "Expected ${callee.arity()} args but got ${args.size}"
+                )
+            }
+            return callee.call(this, args)
+        } else {
+            throw RuntimeError(expr.paren, "Can only call functions and classes")
+        }
+    }
+
     // Stmt.Visitor implementation
     override fun visitBlockStmt(stmt: Stmt.Block) {
         this.executeBlock(stmt.statements, Environment(this.env))
