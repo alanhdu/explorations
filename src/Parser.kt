@@ -86,6 +86,7 @@ class Parser(private val tokens: List<Token>) {
             this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
             this.match(TokenType.IF) -> this.ifStatement()
             this.match(TokenType.WHILE) -> this.whileStatement()
+            this.match(TokenType.FOR) -> this.forStatement()
             else -> this.expressionStatement()
         }
     }
@@ -129,6 +130,38 @@ class Parser(private val tokens: List<Token>) {
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after while condition")
 
         return Stmt.While(cond, this.statement())
+    }
+
+    private fun forStatement(): Stmt {
+        this.consume(TokenType.LEFT_PAREN, "Expect ( after for")
+        val initializer = when {
+            this.match(TokenType.SEMICOLON) -> null
+            this.match(TokenType.VAR) -> this.varDeclaration()
+            else -> this.expressionStatement()
+        }
+
+        val condition = when {
+            this.check(TokenType.SEMICOLON) -> Expr.Literal(true)
+            else -> this.expression()
+        }
+        this.consume(TokenType.SEMICOLON, "Expect ; after loop condition")
+
+        val increment = when {
+            this.check(TokenType.RIGHT_PAREN) -> null
+            else -> this.expressionStatement()
+        }
+        this.consume(TokenType.RIGHT_PAREN, "Expect ) after for clauses")
+
+        // Desugar into a while loop
+        var body = this.statement()
+        if (increment != null) {
+            body = Stmt.Block(listOf(body, increment))
+        }
+        body = Stmt.While(condition, body)
+        if (initializer != null) {
+            body = Stmt.Block(listOf(initializer, body))
+        }
+        return body
     }
 
     private fun expressionStatement(): Stmt {
