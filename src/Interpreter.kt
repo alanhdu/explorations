@@ -4,7 +4,25 @@ class RuntimeError(val token: Token, message: String) : RuntimeException(message
 class Break : RuntimeException()
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
-    private var env = Environment()
+    private var globals = Environment()
+    private var current_env = globals
+
+    init {
+        globals.define("clock", object : LoxCallable {
+            override fun arity(): Int {
+                return 0
+            }
+
+            override fun call(interpreter: Interpreter, args: List<Any?>): Any? {
+                return System.currentTimeMillis().toDouble() / 1000.0
+            }
+
+            override fun toString(): String {
+                return "<native fn>"
+            }
+
+        })
+    }
 
     fun interpret(stmts: List<Stmt>) {
         try {
@@ -117,12 +135,12 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        return this.env.get(expr.name)
+        return this.current_env.get(expr.name)
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Any? {
         val value = this.evaluate(expr.value)
-        this.env.assign(expr.name, value)
+        this.current_env.assign(expr.name, value)
         return value
     }
 
@@ -155,18 +173,18 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     // Stmt.Visitor implementation
     override fun visitBlockStmt(stmt: Stmt.Block) {
-        this.executeBlock(stmt.statements, Environment(this.env))
+        this.executeBlock(stmt.statements, Environment(this.current_env))
     }
 
     private fun executeBlock(stmts: List<Stmt>, env: Environment) {
-        val prev = this.env
+        val prev = this.current_env
         try {
-            this.env = env
+            this.current_env = env
             for (stmt in stmts) {
                 this.execute(stmt)
             }
         } finally {
-            this.env = prev
+            this.current_env = prev
         }
     }
 
@@ -183,7 +201,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         val value = if (stmt.initializer != null) {
             this.evaluate(stmt.initializer)
         } else null
-        this.env.define(stmt.name.lexeme, value)
+        this.current_env.define(stmt.name.lexeme, value)
     }
 
     override fun visitIfStmt(stmt: Stmt.If) {
