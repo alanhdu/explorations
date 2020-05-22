@@ -85,6 +85,7 @@ class Parser(private val tokens: List<Token>) {
             this.match(TokenType.PRINT) -> this.printStatement()
             this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
             this.match(TokenType.IF) -> this.ifStatement()
+            this.match(TokenType.WHILE) -> this.whileStatement()
             else -> this.expressionStatement()
         }
     }
@@ -120,6 +121,14 @@ class Parser(private val tokens: List<Token>) {
         } else null
 
         return Stmt.If(cond, thenBranch, elseBranch)
+    }
+
+    private fun whileStatement(): Stmt {
+        this.consume(TokenType.LEFT_PAREN, "Expect ( after while")
+        val cond = this.expression()
+        this.consume(TokenType.RIGHT_PAREN, "Expect ) after while condition")
+
+        return Stmt.While(cond, this.statement())
     }
 
     private fun expressionStatement(): Stmt {

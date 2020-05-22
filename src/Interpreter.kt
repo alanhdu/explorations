@@ -174,4 +174,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             this.execute(stmt.elseBranch)
         }
     }
+
+    override fun visitWhileStmt(stmt: Stmt.While) {
+        while (this.isTruthy(this.evaluate(stmt.condition))) {
+            this.execute(stmt.body)
+        }
+    }
 }

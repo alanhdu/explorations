@@ -73,6 +73,7 @@ defineAst(
         "Expression" to mapOf("expr" to "Expr"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),
         "Print" to mapOf("expr" to "Expr"),
-        "Var" to mapOf("name" to "Token", "initializer" to "Expr?")
+        "Var" to mapOf("name" to "Token", "initializer" to "Expr?"),
+        "While" to mapOf("condition" to "Expr", "body" to "Stmt")
     )
 )
