@@ -84,6 +84,7 @@ class Parser(private val tokens: List<Token>) {
         return when {
             this.match(TokenType.PRINT) -> this.printStatement()
             this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
+            this.match(TokenType.IF) -> this.ifStatement()
             else -> this.expressionStatement()
         }
     }
@@ -108,6 +109,19 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Print(value)
     }
 
+    private fun ifStatement(): Stmt {
+        this.consume(TokenType.LEFT_PAREN, "Expect ( after if")
+        val cond = this.expression()
+        this.consume(TokenType.RIGHT_PAREN, "Expect ) after if condition")
+
+        val thenBranch = this.statement()
+        val elseBranch = if (this.match(TokenType.ELSE)) {
+            this.statement()
+        } else null
+
+        return Stmt.If(cond, thenBranch, elseBranch)
+    }
+
     private fun expressionStatement(): Stmt {
         val expr = this.expression()
         this.consume(TokenType.SEMICOLON, "Expect ';' after expression")
@@ -119,7 +133,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun assignment(): Expr {
-        val expr = this.equality()
+        val expr = this.or()
 
         if (this.match(TokenType.EQUAL)) { // Assignment
             val equals = this.previous()
@@ -131,6 +145,26 @@ class Parser(private val tokens: List<Token>) {
             } else {
                 this.error(equals, "Invalid assignment target")
             }
+        }
+        return expr
+    }
+
+    private fun or(): Expr {
+        var expr = this.and()
+        while (this.match(TokenType.OR)) {
+            val op = this.previous()
+            val right = this.and()
+            expr = Expr.Logical(expr, op, right)
+        }
+        return expr
+    }
+
+    private fun and(): Expr {
+        var expr = this.equality()
+        while (this.match(TokenType.AND)) {
+            val op = this.previous()
+            val right = this.equality()
+            expr = Expr.Logical(expr, op, right)
         }
         return expr
     }

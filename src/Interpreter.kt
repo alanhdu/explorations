@@ -123,6 +123,17 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return value
     }
 
+    override fun visitLogicalExpr(expr: Expr.Logical): Any? {
+        val left = this.evaluate(expr.left)
+
+        return when (expr.operator.type) {
+            TokenType.AND -> if (!isTruthy(left)) left else this.evaluate(expr.right)
+            TokenType.OR -> if (isTruthy(left)) left else this.evaluate(expr.right)
+            else -> assert(false) { "Unknown logical operator ${expr.operator}" }
+        }
+    }
+
+    // Stmt.Visitor implementation
     override fun visitBlockStmt(stmt: Stmt.Block) {
         this.executeBlock(stmt.statements, Environment(this.env))
     }
@@ -139,7 +150,6 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
-
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
         this.evaluate(stmt.expr)
     }
@@ -154,5 +164,14 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             this.evaluate(stmt.initializer)
         } else null
         this.env.define(stmt.name.lexeme, value)
+    }
+
+    override fun visitIfStmt(stmt: Stmt.If) {
+        val cond = this.evaluate(stmt.condition)
+        if (this.isTruthy(cond)) {
+            this.execute(stmt.thenBranch)
+        } else if (stmt.elseBranch != null) {
+            this.execute(stmt.elseBranch)
+        }
     }
 }

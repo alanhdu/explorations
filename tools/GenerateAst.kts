@@ -62,13 +62,17 @@ defineAst(
         "Binary" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Grouping" to mapOf("expression" to "Expr"),
         "Literal" to mapOf("value" to "Any?"),
+        "Logical" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Unary" to mapOf("operator" to "Token", "right" to "Expr"),
         "Variable" to mapOf("name" to "Token")
     )
 )
-defineAst(outputDir, "Stmt", mapOf(
-    "Block" to mapOf("statements" to "List<Stmt>"),
-    "Expression" to mapOf("expr" to "Expr"),
-    "Print" to mapOf("expr" to "Expr"),
-    "Var" to mapOf("name" to "Token", "initializer" to "Expr?")
-))
+defineAst(
+    outputDir, "Stmt", mapOf(
+        "Block" to mapOf("statements" to "List<Stmt>"),
+        "Expression" to mapOf("expr" to "Expr"),
+        "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),
+        "Print" to mapOf("expr" to "Expr"),
+        "Var" to mapOf("name" to "Token", "initializer" to "Expr?")
+    )
+)
