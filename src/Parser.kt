@@ -1,7 +1,8 @@
 class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
 
-    private var breakables = 0 // # of for/while loops we can break out of
+    // # of for/while loops we can break out of (one per function declaration)
+    private val breakables = mutableListOf(0)
     private var current = 0    // which token we are parsing
 
     fun parse(): List<Stmt> {
@@ -95,6 +96,14 @@ class Parser(private val tokens: List<Token>) {
         }
     }
 
+    private fun breakableStatement(): Stmt {
+        val s = this.breakables.size
+        this.breakables[s - 1] = this.breakables[s - 1] + 1
+        val stmt = this.statement()
+        this.breakables[s - 1] = this.breakables[s - 1] - 1
+        return stmt
+    }
+
     private fun block(): List<Stmt> {
         val statements = ArrayList<Stmt>()
 
@@ -132,10 +141,7 @@ class Parser(private val tokens: List<Token>) {
         val cond = this.expression()
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after while condition")
 
-        this.breakables++
-        val stmt = this.statement()
-        this.breakables--
-        return Stmt.While(cond, stmt)
+        return Stmt.While(cond, this.breakableStatement())
     }
 
     private fun forStatement(): Stmt {
@@ -159,9 +165,7 @@ class Parser(private val tokens: List<Token>) {
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after for clauses")
 
         // Desugar into a while loop
-        this.breakables++
-        var body = this.statement()
-        this.breakables--
+        var body = this.breakableStatement()
         if (increment != null) {
             body = Stmt.Block(listOf(body, Stmt.Expression(increment)))
         }
@@ -174,7 +178,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun breakStatement(): Stmt.Break {
-        if (this.breakables > 0) {
+        if (this.breakables.last() > 0) {
             this.consume(TokenType.SEMICOLON, "Expected ; after break")
             return Stmt.Break()
         } else {
@@ -197,12 +201,19 @@ class Parser(private val tokens: List<Token>) {
 
         // Body
         this.consume(TokenType.LEFT_BRACE, "Expect { before $kind body")
+
+        this.breakables.add(0)
         val body = this.block()
+        this.breakables.removeAt(this.breakables.size - 1)
 
         return Stmt.Function(name, params, body)
     }
 
     private fun returnStatement(): Stmt.Return {
+        if (this.breakables.size == 1) {
+            throw this.error(this.previous(), "return out of function declaration")
+        }
+
         val keyword = this.previous()
         val value = if (this.check(TokenType.SEMICOLON)) {
             null
