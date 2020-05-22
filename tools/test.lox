@@ -10,3 +10,9 @@ while (a < 10000) {
 }
 
 print("HELLO");
+
+fun sayHi(first, last) {
+  print "Hi, " + first + " " + last + "!";
+}
+
+sayHi("Dear", "Reader");

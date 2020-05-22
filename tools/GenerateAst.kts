@@ -39,7 +39,7 @@ fun defineType(
     val fields = types
         .map { "val ${it.key}: ${it.value}" }
         .joinToString(", ")
-    writer.print(
+    writer.println(
         """
         class $className($fields) : $baseName() {
             override fun <R> accept(visitor: Visitor<R>): R {
@@ -73,6 +73,7 @@ defineAst(
         "Break" to mapOf(),
         "Block" to mapOf("statements" to "List<Stmt>"),
         "Expression" to mapOf("expr" to "Expr"),
+        "Function" to mapOf("name" to "Token", "params" to "List<Token>", "body" to "List<Stmt>"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),
         "Print" to mapOf("expr" to "Expr"),
         "Var" to mapOf("name" to "Token", "initializer" to "Expr?"),

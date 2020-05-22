@@ -83,19 +83,13 @@ class Parser(private val tokens: List<Token>) {
 
     private fun statement(): Stmt {
         return when {
-            this.match(TokenType.PRINT) -> this.printStatement()
-            this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
-            this.match(TokenType.IF) -> this.ifStatement()
-            this.match(TokenType.WHILE) -> this.whileStatement()
+            this.match(TokenType.BREAK) -> this.breakStatement()
             this.match(TokenType.FOR) -> this.forStatement()
-            this.match(TokenType.BREAK) -> {
-                if (this.breakables > 0) {
-                    this.consume(TokenType.SEMICOLON, "Expected ; after break")
-                    Stmt.Break()
-                } else {
-                    throw this.error(this.previous(), "break found in bad context")
-                }
-            }
+            this.match(TokenType.FUN) -> this.function("function")
+            this.match(TokenType.IF) -> this.ifStatement()
+            this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
+            this.match(TokenType.PRINT) -> this.printStatement()
+            this.match(TokenType.WHILE) -> this.whileStatement()
             else -> this.expressionStatement()
         }
     }
@@ -113,13 +107,13 @@ class Parser(private val tokens: List<Token>) {
         return statements
     }
 
-    private fun printStatement(): Stmt {
+    private fun printStatement(): Stmt.Print {
         val value = this.expression()
         this.consume(TokenType.SEMICOLON, "Expect ';' after value")
         return Stmt.Print(value)
     }
 
-    private fun ifStatement(): Stmt {
+    private fun ifStatement(): Stmt.If {
         this.consume(TokenType.LEFT_PAREN, "Expect ( after if")
         val cond = this.expression()
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after if condition")
@@ -132,7 +126,7 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.If(cond, thenBranch, elseBranch)
     }
 
-    private fun whileStatement(): Stmt {
+    private fun whileStatement(): Stmt.While {
         this.consume(TokenType.LEFT_PAREN, "Expect ( after while")
         val cond = this.expression()
         this.consume(TokenType.RIGHT_PAREN, "Expect ) after while condition")
@@ -175,6 +169,35 @@ class Parser(private val tokens: List<Token>) {
             body = Stmt.Block(listOf(initializer, body))
         }
         return body
+    }
+
+    private fun breakStatement(): Stmt.Break {
+        if (this.breakables > 0) {
+            this.consume(TokenType.SEMICOLON, "Expected ; after break")
+            return Stmt.Break()
+        } else {
+            throw this.error(this.previous(), "break found in bad context")
+        }
+    }
+
+    private fun function(kind: String): Stmt.Function {
+        val name = this.consume(TokenType.IDENTIFIER, "Expect $kind name")
+
+        // Construct Arguments
+        this.consume(TokenType.LEFT_PAREN, "Expect ( after $kind name")
+        val params = ArrayList<Token>()
+        if (!this.check(TokenType.RIGHT_PAREN)) {
+            do {
+                params.add(this.consume(TokenType.IDENTIFIER, "Expect parameter name"))
+            } while (this.match(TokenType.COMMA))
+        }
+        this.consume(TokenType.RIGHT_PAREN, "Expect ) after parameters")
+
+        // Body
+        this.consume(TokenType.LEFT_BRACE, "Expect { before $kind body")
+        val body = this.block()
+
+        return Stmt.Function(name, params, body)
     }
 
     private fun expressionStatement(): Stmt {
@@ -292,7 +315,7 @@ class Parser(private val tokens: List<Token>) {
         return expr
     }
 
-    private fun finishCall(callee: Expr): Expr {
+    private fun finishCall(callee: Expr): Expr.Call {
         val args = ArrayList<Expr>()
         if (!this.check(TokenType.RIGHT_PAREN)) {
             do {

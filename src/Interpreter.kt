@@ -4,7 +4,7 @@ class RuntimeError(val token: Token, message: String) : RuntimeException(message
 class Break : RuntimeException()
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
-    private var globals = Environment()
+    var globals = Environment()
     private var current_env = globals
 
     init {
@@ -20,7 +20,6 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             override fun toString(): String {
                 return "<native fn>"
             }
-
         })
     }
 
@@ -176,7 +175,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         this.executeBlock(stmt.statements, Environment(this.current_env))
     }
 
-    private fun executeBlock(stmts: List<Stmt>, env: Environment) {
+    fun executeBlock(stmts: List<Stmt>, env: Environment) {
         val prev = this.current_env
         try {
             this.current_env = env
@@ -224,5 +223,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     override fun visitBreakStmt(stmt: Stmt.Break) {
         throw Break()
+    }
+
+    override fun visitFunctionStmt(stmt: Stmt.Function) {
+        val func = LoxFunction(stmt)
+        this.current_env.define(stmt.name.lexeme, func)
     }
 }
