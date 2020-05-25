@@ -208,6 +208,12 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitClassStmt(stmt: Stmt.Class) {
+        this.environment.define(stmt.name.lexeme, null)
+        val klass = LoxClass(stmt.name.lexeme)
+        this.environment.assign(stmt.name, klass)
+    }
+
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
         this.evaluate(stmt.expr)
     }

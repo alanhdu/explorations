@@ -72,6 +72,7 @@ defineAst(
     outputDir, "Stmt", mapOf(
         "Break" to mapOf(),
         "Block" to mapOf("statements" to "List<Stmt>"),
+        "Class" to mapOf("name" to "Token", "methods" to "List<Stmt.Function>"),
         "Expression" to mapOf("expr" to "Expr"),
         "Function" to mapOf("name" to "Token", "params" to "List<Token>", "body" to "List<Stmt>"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),

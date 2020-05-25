@@ -64,6 +64,7 @@ class Parser(private val tokens: List<Token>) {
             when {
                 this.match(TokenType.VAR) -> this.varDeclaration()
                 this.match(TokenType.FUN) -> this.function("function")
+                this.match(TokenType.CLASS) -> this.classDeclaration()
                 else -> this.statement()
             }
         } catch (error: ParseError) {
@@ -73,7 +74,19 @@ class Parser(private val tokens: List<Token>) {
         }
     }
 
-    private fun varDeclaration(): Stmt {
+    private fun classDeclaration(): Stmt {
+        val name = this.consume(TokenType.IDENTIFIER, "Expected class name")
+        this.consume(TokenType.LEFT_BRACE, "Expect { before class body")
+
+        val methods = mutableListOf<Stmt.Function>()
+        while (!this.check(TokenType.RIGHT_BRACE) && this.peek().type != TokenType.EOF) {
+            methods.add(this.function("method"))
+        }
+        this.consume(TokenType.RIGHT_BRACE, "Expect } after class body")
+        return Stmt.Class(name, methods)
+    }
+
+    private fun varDeclaration(): Stmt.Var {
         val name = this.consume(TokenType.IDENTIFIER, "Expect variable name")
 
         val initializer = if (this.match(TokenType.EQUAL)) {

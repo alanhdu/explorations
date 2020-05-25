@@ -1,11 +1,6 @@
 import java.util.*
 import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.MutableMap
-import kotlin.collections.forEach
-import kotlin.collections.reversed
 import kotlin.collections.set
-import kotlin.collections.withIndex
 
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
     private enum class FunctionType {
@@ -79,6 +74,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         this.beginScope()
         this.resolve(stmt.statements)
         this.endScope()
+    }
+
+    override fun visitClassStmt(stmt: Stmt.Class) {
+        this.declare(stmt.name)
+        this.define(stmt.name)
     }
 
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
