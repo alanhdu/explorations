@@ -149,6 +149,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         throw RuntimeError(expr.name, "only instances have properties")
     }
 
+    override fun visitThisExpr(expr: Expr.This): Any? {
+        return this.lookupVariable(expr.keyword, expr)
+    }
+
     override fun visitLiteralExpr(expr: Expr.Literal): Any? {
         return expr.value
     }
@@ -167,8 +171,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        val value = this.lookupVariable(expr.name, expr)
-        return value
+        return lookupVariable(expr.name, expr)
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Any? {
@@ -228,7 +231,14 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     override fun visitClassStmt(stmt: Stmt.Class) {
         this.environment.define(stmt.name.lexeme, null)
-        val klass = LoxClass(stmt.name.lexeme)
+        val methods = stmt.methods.associate {
+            it.name.lexeme to LoxFunction(
+                it,
+                this.environment,
+                it.name.lexeme == "this"
+            )
+        }
+        val klass = LoxClass(stmt.name.lexeme, methods)
         this.environment.assign(stmt.name, klass)
     }
 
@@ -271,7 +281,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function) {
-        val func = LoxFunction(stmt, this.environment)
+        val func = LoxFunction(stmt, this.environment, false)
         this.environment.define(stmt.name.lexeme, func)
     }
 

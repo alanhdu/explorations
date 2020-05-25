@@ -27,8 +27,7 @@ class Environment(private val enclosing: Environment? = null) {
 
     fun getAt(distance: Int, name: String): Any? {
         val vals = this.ancestor(distance).values
-        assert(vals.containsKey(name))
-        return vals[name]
+        return vals.getValue(name)
     }
 
     fun assignAt(distance: Int, name: Token, value: Any?) {

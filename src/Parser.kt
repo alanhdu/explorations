@@ -389,6 +389,7 @@ class Parser(private val tokens: List<Token>) {
                 Expr.Grouping(expr)
             }
             this.match(TokenType.IDENTIFIER) -> Expr.Variable(this.previous())
+            this.match(TokenType.THIS) -> Expr.This(this.previous())
             else -> throw this.error(this.peek(), "Expect expression, got ${this.peek()}")
         }
     }

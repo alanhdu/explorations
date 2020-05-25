@@ -51,6 +51,7 @@ object Lox {
     }
 
     fun error(token: Token, message: String) {
+        hadError = true
         if (token.type == TokenType.EOF) {
             report(token.line, " at end", message)
         } else {

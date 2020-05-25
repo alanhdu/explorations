@@ -66,6 +66,7 @@ defineAst(
         "Literal" to mapOf("value" to "Any?"),
         "Logical" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Set" to mapOf("obj" to "Expr", "name" to "Token", "value" to "Expr"),
+        "This" to mapOf("keyword" to "Token"),
         "Unary" to mapOf("operator" to "Token", "right" to "Expr"),
         "Variable" to mapOf("name" to "Token")
     )
