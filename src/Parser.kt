@@ -61,8 +61,11 @@ class Parser(private val tokens: List<Token>) {
 
     private fun declaration(): Stmt? {
         return try {
-            if (this.match(TokenType.VAR)) this.varDeclaration()
-            else this.statement()
+            when {
+                this.match(TokenType.VAR) -> this.varDeclaration()
+                this.match(TokenType.FUN) -> this.function("function")
+                else -> this.statement()
+            }
         } catch (error: ParseError) {
             Lox.hadError = true
             this.synchronize()
@@ -87,7 +90,6 @@ class Parser(private val tokens: List<Token>) {
         return when {
             this.match(TokenType.BREAK) -> this.breakStatement()
             this.match(TokenType.FOR) -> this.forStatement()
-            this.match(TokenType.FUN) -> this.function("function")
             this.match(TokenType.IF) -> this.ifStatement()
             this.match(TokenType.LEFT_BRACE) -> Stmt.Block(this.block())
             this.match(TokenType.PRINT) -> this.printStatement()
