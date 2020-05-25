@@ -131,6 +131,24 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return this.evaluate(expr.expression)
     }
 
+    override fun visitGetExpr(expr: Expr.Get): Any? {
+        val obj = this.evaluate(expr.obj)
+        if (obj is LoxInstance) {
+            return obj.get(expr.name)
+        }
+        throw RuntimeError(expr.name, "only instances have properties")
+    }
+
+    override fun visitSetExpr(expr: Expr.Set): Any? {
+        val obj = this.evaluate(expr.obj)
+        if (obj is LoxInstance) {
+            val value = this.evaluate(expr.value)
+            obj.set(expr.name, value)
+            return value
+        }
+        throw RuntimeError(expr.name, "only instances have properties")
+    }
+
     override fun visitLiteralExpr(expr: Expr.Literal): Any? {
         return expr.value
     }

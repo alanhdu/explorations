@@ -44,4 +44,12 @@ class AstPrinter : Expr.Visitor<String> {
         return parenthesize("call", expr.callee, *expr.args.toTypedArray())
 
     }
+
+    override fun visitGetExpr(expr: Expr.Get): String {
+        return parenthesize("get-${expr.name.lexeme}", expr.obj)
+    }
+
+    override fun visitSetExpr(expr: Expr.Set): String {
+        return parenthesize("set-${expr.name.lexeme}", expr.obj, expr.value)
+    }
 }

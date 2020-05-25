@@ -259,11 +259,11 @@ class Parser(private val tokens: List<Token>) {
             val equals = this.previous()
             val value = this.assignment()
 
-            if (expr is Expr.Variable) {
+            when (expr) {
                 // rvalue to lvalue
-                return Expr.Assign(expr.name, value)
-            } else {
-                this.error(equals, "Invalid assignment target")
+                is Expr.Variable -> return Expr.Assign(expr.name, value)
+                is Expr.Get -> return Expr.Set(expr.obj, expr.name, value)
+                else -> this.error(equals, "Invalid assignment target")
             }
         }
         return expr
@@ -348,8 +348,11 @@ class Parser(private val tokens: List<Token>) {
         var expr = this.primary()
 
         while (true) {
-            if (this.match(TokenType.LEFT_PAREN)) {
-                expr = this.finishCall(expr)
+            expr = if (this.match(TokenType.LEFT_PAREN)) {
+                this.finishCall(expr)
+            } else if (this.match(TokenType.DOT)) {
+                val name = this.consume(TokenType.IDENTIFIER, "Expected property name after .")
+                Expr.Get(expr, name)
             } else {
                 break
             }

@@ -136,6 +136,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         expr.args.forEach { this.resolve(it) }
     }
 
+    override fun visitGetExpr(expr: Expr.Get) {
+        this.resolve(expr.obj)
+    }
+
     override fun visitGroupingExpr(expr: Expr.Grouping) {
         this.resolve(expr.expression)
     }
@@ -146,6 +150,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     override fun visitLogicalExpr(expr: Expr.Logical) {
         this.resolve(expr.left)
         this.resolve(expr.right)
+    }
+
+    override fun visitSetExpr(expr: Expr.Set) {
+        this.resolve(expr.value)
+        this.resolve(expr.obj)
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary) {

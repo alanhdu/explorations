@@ -61,9 +61,11 @@ defineAst(
         "Assign" to mapOf("name" to "Token", "value" to "Expr"),
         "Binary" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Call" to mapOf("callee" to "Expr", "paren" to "Token", "args" to "List<Expr>"),
+        "Get" to mapOf("obj" to "Expr", "name" to "Token"),
         "Grouping" to mapOf("expression" to "Expr"),
         "Literal" to mapOf("value" to "Any?"),
         "Logical" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
+        "Set" to mapOf("obj" to "Expr", "name" to "Token", "value" to "Expr"),
         "Unary" to mapOf("operator" to "Token", "right" to "Expr"),
         "Variable" to mapOf("name" to "Token")
     )
