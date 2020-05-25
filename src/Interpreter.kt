@@ -6,7 +6,8 @@ class Return(val value: Any?) : RuntimeException()
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     var globals = Environment()
-    private var current_env = globals
+    private val locals: MutableMap<Expr, Int> = HashMap()
+    private var environment = globals
 
     init {
         globals.define("clock", object : LoxCallable {
@@ -31,6 +32,19 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             }
         } catch (error: RuntimeError) {
             Lox.runtimeError(error)
+        }
+    }
+
+    fun resolve(expr: Expr, depth: Int) {
+        this.locals[expr] = depth
+    }
+
+    private fun lookupVariable(name: Token, expr: Expr): Any? {
+        val dist = this.locals[expr]
+        return if (dist != null) {
+            this.environment.getAt(dist, name.lexeme)
+        } else {
+            this.globals.get(name)
         }
     }
 
@@ -135,12 +149,18 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        return this.current_env.get(expr.name)
+        val value = this.lookupVariable(expr.name, expr)
+        return value
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Any? {
         val value = this.evaluate(expr.value)
-        this.current_env.assign(expr.name, value)
+        val distance = this.locals[expr]
+        if (distance != null) {
+            this.environment.assignAt(distance, expr.name, value)
+        } else {
+            this.globals.assign(expr.name, value)
+        }
         return value
     }
 
@@ -173,18 +193,18 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     // Stmt.Visitor implementation
     override fun visitBlockStmt(stmt: Stmt.Block) {
-        this.executeBlock(stmt.statements, Environment(this.current_env))
+        this.executeBlock(stmt.statements, Environment(this.environment))
     }
 
     fun executeBlock(stmts: List<Stmt>, env: Environment) {
-        val prev = this.current_env
+        val prev = this.environment
         try {
-            this.current_env = env
+            this.environment = env
             for (stmt in stmts) {
                 this.execute(stmt)
             }
         } finally {
-            this.current_env = prev
+            this.environment = prev
         }
     }
 
@@ -194,14 +214,14 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     override fun visitPrintStmt(stmt: Stmt.Print) {
         val value = this.evaluate(stmt.expr)
-        println(this.stringify(value))
+        println(value)
     }
 
     override fun visitVarStmt(stmt: Stmt.Var) {
         val value = if (stmt.initializer != null) {
             this.evaluate(stmt.initializer)
         } else null
-        this.current_env.define(stmt.name.lexeme, value)
+        this.environment.define(stmt.name.lexeme, value)
     }
 
     override fun visitIfStmt(stmt: Stmt.If) {
@@ -227,8 +247,8 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function) {
-        val func = LoxFunction(stmt)
-        this.current_env.define(stmt.name.lexeme, func)
+        val func = LoxFunction(stmt, this.environment)
+        this.environment.define(stmt.name.lexeme, func)
     }
 
     override fun visitReturnStmt(stmt: Stmt.Return) {

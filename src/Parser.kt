@@ -174,6 +174,7 @@ class Parser(private val tokens: List<Token>) {
         if (initializer != null) {
             body = Stmt.Block(listOf(initializer, body))
         }
+        println("$initializer")
 
         return body
     }
