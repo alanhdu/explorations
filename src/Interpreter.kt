@@ -195,6 +195,19 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitSuperExpr(expr: Expr.Super): Any? {
+        val distance = this.locals[expr]!!
+        val superclass = environment.getAt(distance, "super") as LoxClass
+        // "this" is always one environment closer from `super`
+        val obj = environment.getAt(distance - 1, "this") as LoxInstance
+
+        val method = superclass.findMethod(expr.method.lexeme)
+        if (method != null) {
+            return method.bind(obj)
+        }
+        throw RuntimeError(expr.method, "Undefined property ${expr.method.lexeme}")
+    }
+
     override fun visitCallExpr(expr: Expr.Call): Any? {
         val callee = this.evaluate(expr.callee)
         val args = expr.args.map { this.evaluate(it) }
@@ -230,7 +243,22 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitClassStmt(stmt: Stmt.Class) {
+        val superclass = if (stmt.superclass != null) {
+            val value = this.evaluate(stmt.superclass)
+            if (value !is LoxClass) {
+                throw RuntimeError(stmt.superclass.name, "Superclass must be a class")
+            }
+            value
+        } else {
+            null
+        }
         this.environment.define(stmt.name.lexeme, null)
+
+        if (stmt.superclass != null) {
+            this.environment = Environment(this.environment)
+            this.environment.define("super", superclass)
+        }
+
         val methods = stmt.methods.associate {
             it.name.lexeme to LoxFunction(
                 it,
@@ -238,7 +266,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 it.name.lexeme == "this"
             )
         }
-        val klass = LoxClass(stmt.name.lexeme, methods)
+        val klass = LoxClass(stmt.name.lexeme, superclass, methods)
+        if (superclass != null) {
+            this.environment = this.environment.enclosing!!
+        }
         this.environment.assign(stmt.name, klass)
     }
 

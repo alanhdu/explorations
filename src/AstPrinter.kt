@@ -56,4 +56,8 @@ class AstPrinter : Expr.Visitor<String> {
     override fun visitThisExpr(expr: Expr.This): String {
         return "this"
     }
+
+    override fun visitSuperExpr(expr: Expr.Super): String {
+        return "(super ${expr.keyword}"
+    }
 }

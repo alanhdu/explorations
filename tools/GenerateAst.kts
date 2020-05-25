@@ -66,6 +66,7 @@ defineAst(
         "Literal" to mapOf("value" to "Any?"),
         "Logical" to mapOf("left" to "Expr", "operator" to "Token", "right" to "Expr"),
         "Set" to mapOf("obj" to "Expr", "name" to "Token", "value" to "Expr"),
+        "Super" to mapOf("keyword" to "Token", "method" to "Token"),
         "This" to mapOf("keyword" to "Token"),
         "Unary" to mapOf("operator" to "Token", "right" to "Expr"),
         "Variable" to mapOf("name" to "Token")
@@ -75,7 +76,11 @@ defineAst(
     outputDir, "Stmt", mapOf(
         "Break" to mapOf(),
         "Block" to mapOf("statements" to "List<Stmt>"),
-        "Class" to mapOf("name" to "Token", "methods" to "List<Stmt.Function>"),
+        "Class" to mapOf(
+            "name" to "Token",
+            "superclass" to "Expr.Variable?",
+            "methods" to "List<Stmt.Function>"
+        ),
         "Expression" to mapOf("expr" to "Expr"),
         "Function" to mapOf("name" to "Token", "params" to "List<Token>", "body" to "List<Stmt>"),
         "If" to mapOf("condition" to "Expr", "thenBranch" to "Stmt", "elseBranch" to "Stmt?"),

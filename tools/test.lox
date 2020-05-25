@@ -26,3 +26,18 @@ fun fibonacci(n) {
 for (var i = 0; i < 20; i = i + 1) {
   print fibonacci(i);
 }
+
+class Doughnut {
+  cook() {
+    print "Fry until golden brown.";
+  }
+}
+
+class BostonCream < Doughnut {
+  cook() {
+    super.cook();
+    print "Pipe full of custard and coat with chocolate.";
+  }
+}
+
+BostonCream().cook();

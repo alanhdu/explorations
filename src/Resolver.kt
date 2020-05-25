@@ -4,7 +4,7 @@ import kotlin.collections.set
 
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
     private enum class FunctionType { NONE, FUNCTION, METHOD, INITIALIZER }
-    private enum class ClassType { NONE, CLASS }
+    private enum class ClassType { NONE, CLASS, SUBCLASS }
 
     private val scopes: Stack<MutableMap<String, Boolean>> = Stack()
     private var currentFunction: FunctionType = FunctionType.NONE
@@ -82,6 +82,17 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         this.declare(stmt.name)
         this.define(stmt.name)
 
+        if (stmt.superclass != null) {
+            this.currentClass = ClassType.SUBCLASS
+            if (stmt.name.lexeme == stmt.superclass.name.lexeme) {
+                Lox.error(stmt.superclass.name, "A class cannot inherit from itself")
+            } else {
+                this.resolve(stmt.superclass)
+            }
+            this.beginScope()
+            this.scopes.peek()["super"] = true
+        }
+
         this.beginScope()
         this.scopes.peek()["this"] = true
 
@@ -91,6 +102,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
             this.resolveFunction(method, declaration)
         }
         this.endScope()
+        if (stmt.superclass != null) {
+            this.endScope()
+        }
         this.currentClass = enclosingClass
     }
 
@@ -191,5 +205,13 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
             Lox.error(expr.name, "Cannot read local variable name in its own initializer")
         }
         this.resolveLocal(expr, expr.name)
+    }
+
+    override fun visitSuperExpr(expr: Expr.Super) {
+        when (this.currentClass) {
+            ClassType.SUBCLASS -> this.resolveLocal(expr, expr.keyword)
+            ClassType.NONE -> Lox.error(expr.keyword, "Can't use `super` outside of a class")
+            ClassType.CLASS -> Lox.error(expr.keyword, "Can't use `super` with no base classes")
+        }
     }
 }

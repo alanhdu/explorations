@@ -76,14 +76,20 @@ class Parser(private val tokens: List<Token>) {
 
     private fun classDeclaration(): Stmt {
         val name = this.consume(TokenType.IDENTIFIER, "Expected class name")
-        this.consume(TokenType.LEFT_BRACE, "Expect { before class body")
+        val superclass = if (this.match(TokenType.LESS)) {
+            this.consume(TokenType.IDENTIFIER, "Expect superclass name")
+            Expr.Variable(this.previous())
+        } else {
+            null
+        }
 
+        this.consume(TokenType.LEFT_BRACE, "Expect { before class body")
         val methods = mutableListOf<Stmt.Function>()
         while (!this.check(TokenType.RIGHT_BRACE) && this.peek().type != TokenType.EOF) {
             methods.add(this.function("method"))
         }
         this.consume(TokenType.RIGHT_BRACE, "Expect } after class body")
-        return Stmt.Class(name, methods)
+        return Stmt.Class(name, superclass, methods)
     }
 
     private fun varDeclaration(): Stmt.Var {
@@ -390,6 +396,12 @@ class Parser(private val tokens: List<Token>) {
             }
             this.match(TokenType.IDENTIFIER) -> Expr.Variable(this.previous())
             this.match(TokenType.THIS) -> Expr.This(this.previous())
+            this.match(TokenType.SUPER) -> {
+                val keyword = this.previous()
+                this.consume(TokenType.DOT, "Exect . after super")
+                this.consume(TokenType.IDENTIFIER, "Exect superclass method name")
+                Expr.Super(keyword, this.previous())
+            }
             else -> throw this.error(this.peek(), "Expect expression, got ${this.peek()}")
         }
     }
