@@ -3,7 +3,8 @@ but not large enough to get their own separate repositories.
 
 In reverse chronological order:
 
-- `compressed-binary-integer-search` (2019-04-26) -- Benchmarking
+- `jlox` (2020-05-25) -- A Kotlin implementation of jlox, from ["Crafting
+  Interpreters"](https://craftinginterpreters.com/a-tree-walk-interpreter.html)
 - `vbp` (2019-04-25) -- Vertical Bit-Parallelism Rank, based off of
   "BitWeaving: Fast Scans for Main Memory Data Processing"
 - `scheme` (2019-01-30) -- A small Scheme (based off of
