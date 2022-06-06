@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["Alan Du <alanhdu@gmail.com>"]
 
 [dependencies]
-crossbeam = "0.2"
+crossbeam = "0.4"
 futures = "0.1"
